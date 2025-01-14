@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "moteroom"
+version = "0.1.0"
+description = "Cotton gin lot accounting, classing and producer settlement"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Proprietary" }
+authors = [{ name = "glinskevxer" }]
+dependencies = ["click==8.1.8"]
+
+[project.scripts]
+moteroom = "moteroom.cli.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/moteroom"]
+
+[tool.ruff]
+line-length = 96
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4", "RET", "ARG", "PTH", "N"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests"]
+strict = true
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers --strict-config"
+
+[tool.coverage.run]
+source = ["src/moteroom"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
