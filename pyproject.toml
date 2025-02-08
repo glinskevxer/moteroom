@@ -18,6 +18,9 @@ moteroom = "moteroom.cli.main:main"
 [tool.hatch.build.targets.wheel]
 packages = ["src/moteroom"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"src/moteroom/py.typed" = "moteroom/py.typed"
+
 [tool.ruff]
 line-length = 96
 target-version = "py312"
