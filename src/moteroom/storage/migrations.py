@@ -1,0 +1,116 @@
+"""Migrations.
+
+The book is a sqlite file that lives on the office machine and gets copied
+onto a memory stick at the end of the season, so it has to be able to move
+forward from whatever version it was left at. Every migration is a numbered
+list of statements, applied in one transaction, and the version it reached is
+written into the file itself.
+
+Migrations are append only. Editing one that has shipped means two books with
+the same version number and different shapes, which is the one thing this
+module exists to prevent.
+"""
+
+from __future__ import annotations
+
+import sqlite3
+from dataclasses import dataclass
+
+from moteroom.core.errors import MoteroomError
+
+
+class MigrationError(MoteroomError):
+    """The book is at a version this build cannot work with."""
+
+
+@dataclass(frozen=True)
+class Migration:
+    """One numbered step, with the statements that make it."""
+
+    version: int
+    description: str
+    statements: tuple[str, ...]
+
+
+MIGRATIONS: tuple[Migration, ...] = (
+    Migration(
+        version=1,
+        description="producers, farms and the ticket book",
+        statements=(
+            """
+            CREATE TABLE producers (
+                code        TEXT PRIMARY KEY,
+                name        TEXT NOT NULL
+            )
+            """,
+            """
+            CREATE TABLE farms (
+                number      TEXT NOT NULL,
+                tract       TEXT NOT NULL,
+                producer    TEXT NOT NULL REFERENCES producers(code),
+                acres       TEXT NOT NULL,
+                PRIMARY KEY (number, tract)
+            )
+            """,
+            """
+            CREATE TABLE tickets (
+                number      INTEGER NOT NULL,
+                season      INTEGER NOT NULL,
+                module      TEXT NOT NULL,
+                producer    TEXT NOT NULL REFERENCES producers(code),
+                farm        TEXT NOT NULL,
+                weighed_on  TEXT NOT NULL,
+                gross       INTEGER NOT NULL,
+                tare        INTEGER NOT NULL,
+                moisture    TEXT NOT NULL,
+                voids       INTEGER,
+                PRIMARY KEY (season, number)
+            )
+            """,
+            "CREATE INDEX tickets_by_producer ON tickets (season, producer)",
+            "CREATE UNIQUE INDEX tickets_by_module ON tickets (season, module, number)",
+        ),
+    ),
+)
+
+LATEST = MIGRATIONS[-1].version
+
+
+def current_version(connection: sqlite3.Connection) -> int:
+    """What version the file is at, which is zero for an empty one."""
+    row = connection.execute("PRAGMA user_version").fetchone()
+    return int(row[0])
+
+
+def pending(connection: sqlite3.Connection) -> list[Migration]:
+    """The migrations this file has not had yet."""
+    at = current_version(connection)
+    if at > LATEST:
+        raise MigrationError(f"the book is at version {at} and this build knows {LATEST}")
+    return [step for step in MIGRATIONS if step.version > at]
+
+
+def migrate(connection: sqlite3.Connection) -> list[int]:
+    """Bring a book up to date, returning the versions applied."""
+    applied: list[int] = []
+    for step in pending(connection):
+        with connection:
+            for statement in step.statements:
+                connection.execute(statement)
+            connection.execute(f"PRAGMA user_version = {step.version}")
+        applied.append(step.version)
+    return applied
+
+
+def check_migrations() -> None:
+    """Refuse a build whose migrations are numbered wrongly."""
+    versions = [step.version for step in MIGRATIONS]
+    if versions != sorted(versions):
+        raise MigrationError("migrations are out of order")
+    if len(set(versions)) != len(versions):
+        raise MigrationError("two migrations share a version")
+    if versions and versions[0] != 1:
+        raise MigrationError("migrations start at one")
+    for earlier, later in zip(versions, versions[1:], strict=False):
+        if later != earlier + 1:
+            raise MigrationError(f"a version is missing between {earlier} and {later}")
