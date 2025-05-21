@@ -71,6 +71,50 @@ MIGRATIONS: tuple[Migration, ...] = (
             "CREATE UNIQUE INDEX tickets_by_module ON tickets (season, module, number)",
         ),
     ),
+    Migration(
+        version=2,
+        description="gin lots and the bales pressed off them",
+        statements=(
+            """
+            CREATE TABLE lots (
+                season      INTEGER NOT NULL,
+                number      INTEGER NOT NULL,
+                ginned_on   TEXT NOT NULL,
+                seed_cotton INTEGER NOT NULL,
+                lint        INTEGER NOT NULL,
+                seed        INTEGER NOT NULL,
+                motes       INTEGER NOT NULL,
+                closed      INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (season, number)
+            )
+            """,
+            """
+            CREATE TABLE lot_tickets (
+                season      INTEGER NOT NULL,
+                lot         INTEGER NOT NULL,
+                ticket      INTEGER NOT NULL,
+                PRIMARY KEY (season, lot, ticket),
+                FOREIGN KEY (season, lot) REFERENCES lots(season, number),
+                FOREIGN KEY (season, ticket) REFERENCES tickets(season, number)
+            )
+            """,
+            """
+            CREATE TABLE bales (
+                bale_id     TEXT PRIMARY KEY,
+                season      INTEGER NOT NULL,
+                lot         INTEGER NOT NULL,
+                number      INTEGER NOT NULL,
+                pressed_on  TEXT NOT NULL,
+                gross       INTEGER NOT NULL,
+                tare        INTEGER NOT NULL,
+                moisture    TEXT NOT NULL,
+                FOREIGN KEY (season, lot) REFERENCES lots(season, number)
+            )
+            """,
+            "CREATE INDEX bales_by_lot ON bales (season, lot)",
+            "CREATE UNIQUE INDEX bales_by_number ON bales (season, number)",
+        ),
+    ),
 )
 
 LATEST = MIGRATIONS[-1].version
