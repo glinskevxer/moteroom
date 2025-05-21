@@ -115,6 +115,34 @@ MIGRATIONS: tuple[Migration, ...] = (
             "CREATE UNIQUE INDEX bales_by_number ON bales (season, number)",
         ),
     ),
+    Migration(
+        version=3,
+        description="classing cards and their extraneous findings",
+        statements=(
+            """
+            CREATE TABLE cards (
+                bale_id     TEXT PRIMARY KEY REFERENCES bales(bale_id),
+                classed_on  TEXT NOT NULL,
+                office      TEXT NOT NULL,
+                micronaire  TEXT NOT NULL,
+                staple      INTEGER NOT NULL,
+                strength    TEXT NOT NULL,
+                uniformity  TEXT NOT NULL,
+                color       INTEGER NOT NULL,
+                leaf        INTEGER NOT NULL,
+                trash       TEXT NOT NULL
+            )
+            """,
+            """
+            CREATE TABLE card_extraneous (
+                bale_id     TEXT NOT NULL REFERENCES cards(bale_id),
+                code        TEXT NOT NULL,
+                PRIMARY KEY (bale_id, code)
+            )
+            """,
+            "CREATE INDEX cards_by_grade ON cards (color, leaf)",
+        ),
+    ),
 )
 
 LATEST = MIGRATIONS[-1].version
