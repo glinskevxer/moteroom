@@ -143,6 +143,43 @@ MIGRATIONS: tuple[Migration, ...] = (
             "CREATE INDEX cards_by_grade ON cards (color, leaf)",
         ),
     ),
+    Migration(
+        version=4,
+        description="warehouse receipts and shipping orders",
+        statements=(
+            """
+            CREATE TABLE receipts (
+                number      TEXT PRIMARY KEY,
+                warehouse   TEXT NOT NULL,
+                bale_id     TEXT NOT NULL REFERENCES bales(bale_id),
+                received_on TEXT NOT NULL,
+                net         INTEGER NOT NULL,
+                holder      TEXT NOT NULL,
+                electronic  INTEGER NOT NULL DEFAULT 1,
+                released_on TEXT
+            )
+            """,
+            "CREATE INDEX receipts_by_bale ON receipts (bale_id)",
+            "CREATE INDEX receipts_by_holder ON receipts (holder, released_on)",
+            """
+            CREATE TABLE orders (
+                number      TEXT PRIMARY KEY,
+                warehouse   TEXT NOT NULL,
+                ordered_on  TEXT NOT NULL,
+                buyer       TEXT NOT NULL,
+                ship_by     TEXT
+            )
+            """,
+            """
+            CREATE TABLE order_receipts (
+                order_number TEXT NOT NULL REFERENCES orders(number),
+                receipt      TEXT NOT NULL REFERENCES receipts(number),
+                position     INTEGER NOT NULL,
+                PRIMARY KEY (order_number, receipt)
+            )
+            """,
+        ),
+    ),
 )
 
 LATEST = MIGRATIONS[-1].version
