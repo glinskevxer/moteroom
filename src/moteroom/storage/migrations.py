@@ -180,6 +180,36 @@ MIGRATIONS: tuple[Migration, ...] = (
             """,
         ),
     ),
+    Migration(
+        version=5,
+        description="settlements and the advances that come off them",
+        statements=(
+            """
+            CREATE TABLE statements (
+                season          INTEGER NOT NULL,
+                producer        TEXT NOT NULL REFERENCES producers(code),
+                bales           INTEGER NOT NULL,
+                lint            INTEGER NOT NULL,
+                lint_proceeds   TEXT NOT NULL,
+                gin_charges     TEXT NOT NULL,
+                seed_credit     TEXT NOT NULL,
+                settled_on      TEXT NOT NULL,
+                PRIMARY KEY (season, producer)
+            )
+            """,
+            """
+            CREATE TABLE advances (
+                season      INTEGER NOT NULL,
+                producer    TEXT NOT NULL REFERENCES producers(code),
+                reference   TEXT NOT NULL,
+                amount      TEXT NOT NULL,
+                paid_on     TEXT NOT NULL,
+                PRIMARY KEY (season, producer, reference)
+            )
+            """,
+            "CREATE INDEX advances_by_producer ON advances (season, producer)",
+        ),
+    ),
 )
 
 LATEST = MIGRATIONS[-1].version
