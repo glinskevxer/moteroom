@@ -15,6 +15,7 @@ import click
 
 from moteroom import __version__
 from moteroom.cli.context import DEFAULT_BOOK, Session
+from moteroom.cli.producers import producer
 from moteroom.core.errors import MoteroomError
 from moteroom.storage.migrations import LATEST
 
@@ -66,6 +67,9 @@ def init(session: Session) -> None:
     opened = session.book()
     state = "opened" if existed else "created"
     click.echo(f"{state} {session.book_path} at schema {opened.version}")
+
+
+main.add_command(producer)
 
 
 def run() -> int:
