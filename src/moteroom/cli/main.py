@@ -16,6 +16,7 @@ import click
 from moteroom import __version__
 from moteroom.cli.context import DEFAULT_BOOK, Session
 from moteroom.cli.producers import producer
+from moteroom.cli.receiving import ticket
 from moteroom.core.errors import MoteroomError
 from moteroom.storage.migrations import LATEST
 
@@ -70,6 +71,7 @@ def init(session: Session) -> None:
 
 
 main.add_command(producer)
+main.add_command(ticket)
 
 
 def run() -> int:
