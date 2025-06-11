@@ -88,6 +88,20 @@ class LotRepository:
         ).fetchone()
         return int(row["top"] or 0) + 1
 
+    def assigned_tickets(self, season: Season) -> set[int]:
+        """Every ticket already ginned into a lot this season."""
+        rows = self.connection.execute(
+            "SELECT ticket FROM lot_tickets WHERE season = ?", (season.year,)
+        )
+        return {int(row["ticket"]) for row in rows}
+
+    def lot_for_ticket(self, season: Season, ticket: int) -> LotId | None:
+        row = self.connection.execute(
+            "SELECT lot FROM lot_tickets WHERE season = ? AND ticket = ?",
+            (season.year, ticket),
+        ).fetchone()
+        return None if row is None else LotId(season, int(row["lot"]))
+
     def _tickets(self, season: int, number: int) -> tuple[int, ...]:
         rows = self.connection.execute(
             "SELECT ticket FROM lot_tickets WHERE season = ? AND lot = ? ORDER BY ticket",
