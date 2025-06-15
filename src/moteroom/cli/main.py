@@ -18,6 +18,7 @@ from moteroom.cli.context import DEFAULT_BOOK, Session
 from moteroom.cli.ginning import lot
 from moteroom.cli.producers import producer
 from moteroom.cli.receiving import ticket
+from moteroom.cli.settings import setting
 from moteroom.core.errors import MoteroomError
 from moteroom.storage.migrations import LATEST
 
@@ -74,6 +75,7 @@ def init(session: Session) -> None:
 main.add_command(producer)
 main.add_command(ticket)
 main.add_command(lot)
+main.add_command(setting)
 
 
 def run() -> int:

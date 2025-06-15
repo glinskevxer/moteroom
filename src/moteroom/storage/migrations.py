@@ -210,6 +210,19 @@ MIGRATIONS: tuple[Migration, ...] = (
             "CREATE INDEX advances_by_producer ON advances (season, producer)",
         ),
     ),
+    Migration(
+        version=6,
+        description="plant settings, such as the gin code and the season's rates",
+        statements=(
+            """
+            CREATE TABLE settings (
+                name        TEXT PRIMARY KEY,
+                value       TEXT NOT NULL,
+                changed_on  TEXT NOT NULL
+            )
+            """,
+        ),
+    ),
 )
 
 LATEST = MIGRATIONS[-1].version
