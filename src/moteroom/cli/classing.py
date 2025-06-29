@@ -1,0 +1,137 @@
+"""Classing commands.
+
+Loading a transfer is the one command that carries on after an error. The
+office sends a file a week and a single unreadable line in it must not stop
+the other four hundred bales from being classed, so the rejects are reported
+and the rest goes in.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import click
+
+from moteroom.classing.transfer import parse_file
+from moteroom.cli.context import Session
+from moteroom.cli.output import render_pairs, render_table
+from moteroom.core.errors import ConflictError, ValidationError
+from moteroom.core.ids import BaleId
+from moteroom.storage.cards import CardRepository
+from moteroom.storage.lots import BaleRepository
+
+
+@click.group()
+def card() -> None:
+    """Classing cards back from the office."""
+
+
+@card.command("load")
+@click.argument("path", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.pass_obj
+def load_cards(session: Session, path: Path) -> None:
+    """Load a classing transfer file."""
+    book = session.require_book()
+    transfer = parse_file(path.read_text(encoding="utf-8"))
+    loaded = 0
+    skipped: list[tuple[str, str]] = []
+    with book.transaction() as conn:
+        cards = CardRepository(conn)
+        bales = BaleRepository(conn)
+        known = {str(one.bale_id) for one in bales.for_season(session.season)}
+        for record in transfer.records:
+            key = str(record.bale_id)
+            if key not in known:
+                skipped.append((key, "no such bale here"))
+                continue
+            if cards.has(record.bale_id):
+                skipped.append((key, "already classed"))
+                continue
+            cards.add(record)
+            loaded += 1
+    click.echo(f"loaded {loaded} of {transfer.declared} from {transfer.office}")
+    for reject in transfer.rejects:
+        click.echo(f"  rejected {reject}")
+    for key, reason in skipped:
+        click.echo(f"  skipped {key}: {reason}")
+
+
+@card.command("show")
+@click.argument("bale_id")
+@click.pass_obj
+def show_card(session: Session, bale_id: str) -> None:
+    """One card, as the office sent it."""
+    book = session.require_book()
+    found = CardRepository(book.connection).get(BaleId.parse(bale_id))
+    click.echo(
+        render_pairs(
+            [
+                ("bale", found.bale_id.grouped()),
+                ("classed", found.classed_on.isoformat()),
+                ("office", found.office),
+                ("colour", f"{found.color} {found.color.name}"),
+                ("leaf", f"{found.leaf} {found.leaf.name}"),
+                ("staple", f"{found.staple} ({found.staple.inches} in)"),
+                ("micronaire", str(found.micronaire)),
+                ("strength", str(found.strength)),
+                ("uniformity", str(found.uniformity)),
+                ("trash", str(found.trash)),
+                ("findings", " ".join(found.codes) if found.codes else "none"),
+            ]
+        )
+    )
+
+
+@card.command("list")
+@click.pass_obj
+def list_cards(session: Session) -> None:
+    """Every card back this season."""
+    book = session.require_book()
+    rows = [
+        [
+            str(found.bale_id),
+            str(found.color),
+            str(found.leaf),
+            str(found.staple),
+            str(found.micronaire),
+            " ".join(found.codes),
+        ]
+        for found in CardRepository(book.connection).for_season(session.season)
+    ]
+    click.echo(
+        render_table(
+            ["bale", "colour", "leaf", "staple", "mike", "findings"], rows, right=(3, 4)
+        )
+    )
+
+
+@card.command("waiting")
+@click.pass_obj
+def waiting(session: Session) -> None:
+    """Bales pressed with no card back yet."""
+    book = session.require_book()
+    outstanding = CardRepository(book.connection).unclassed(session.season)
+    rows = [[str(one), one.grouped()] for one in outstanding]
+    click.echo(render_table(["bale", "tag"], rows))
+    click.echo()
+    click.echo(f"{len(outstanding)} waiting")
+
+
+@card.command("correct")
+@click.argument("path", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.pass_obj
+def correct_cards(session: Session, path: Path) -> None:
+    """Take a corrected transfer over cards already on file."""
+    book = session.require_book()
+    transfer = parse_file(path.read_text(encoding="utf-8"))
+    if transfer.rejects:
+        raise ValidationError("transfer", "a correction file has to read cleanly")
+    replaced = 0
+    with book.transaction() as conn:
+        cards = CardRepository(conn)
+        for record in transfer.records:
+            if not cards.has(record.bale_id):
+                raise ConflictError("card", str(record.bale_id), "was never classed")
+            cards.replace(record)
+            replaced += 1
+    click.echo(f"replaced {replaced} cards")

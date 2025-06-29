@@ -14,6 +14,7 @@ from pathlib import Path
 import click
 
 from moteroom import __version__
+from moteroom.cli.classing import card
 from moteroom.cli.context import DEFAULT_BOOK, Session
 from moteroom.cli.ginning import lot
 from moteroom.cli.press import bale
@@ -78,6 +79,7 @@ main.add_command(ticket)
 main.add_command(lot)
 main.add_command(setting)
 main.add_command(bale)
+main.add_command(card)
 
 
 def run() -> int:
