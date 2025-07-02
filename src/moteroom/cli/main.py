@@ -21,6 +21,7 @@ from moteroom.cli.press import bale
 from moteroom.cli.producers import producer
 from moteroom.cli.receiving import ticket
 from moteroom.cli.settings import setting
+from moteroom.cli.warehousing import order, receipt
 from moteroom.core.errors import MoteroomError
 from moteroom.storage.migrations import LATEST
 
@@ -80,6 +81,8 @@ main.add_command(lot)
 main.add_command(setting)
 main.add_command(bale)
 main.add_command(card)
+main.add_command(receipt)
+main.add_command(order)
 
 
 def run() -> int:
