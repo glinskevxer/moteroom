@@ -77,6 +77,24 @@ def divide(amount: Weight, basis: dict[str, Weight]) -> dict[str, Weight]:
     return out
 
 
+def divide_count(count: int, basis: dict[str, Weight]) -> dict[str, int]:
+    """Divide a count of bales on the same basis the pounds were divided on."""
+    if count < 0:
+        raise ValidationError("count", "must not be negative")
+    denominator = sum(weight.pounds for weight in basis.values())
+    if denominator == 0:
+        raise ValidationError("basis", "nothing to divide on")
+    out = {name: count * basis[name].pounds // denominator for name in sorted(basis)}
+    remainder = count - sum(out.values())
+    order = sorted(basis, key=lambda name: (-basis[name].pounds, name))
+    index = 0
+    while remainder > 0:
+        out[order[index % len(order)]] += 1
+        remainder -= 1
+        index += 1
+    return out
+
+
 def allocate(run: GinRun, tickets: Sequence[ModuleTicket]) -> Allocation:
     """Split a lot's lint and seed between the producers who fed it."""
     numbers = {ticket.number for ticket in tickets}
