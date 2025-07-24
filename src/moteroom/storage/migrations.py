@@ -223,6 +223,28 @@ MIGRATIONS: tuple[Migration, ...] = (
             """,
         ),
     ),
+    Migration(
+        version=7,
+        description="the rates a season is settled against",
+        statements=(
+            """
+            CREATE TABLE season_rates (
+                season                  INTEGER PRIMARY KEY,
+                ginning_per_cwt         TEXT NOT NULL,
+                bagging_and_ties        TEXT NOT NULL,
+                module_handling         TEXT NOT NULL,
+                drying_per_cwt          TEXT NOT NULL,
+                minimum_per_bale        TEXT NOT NULL,
+                seed_price_per_ton      TEXT NOT NULL,
+                seed_gin_shares         INTEGER NOT NULL,
+                seed_producer_shares    INTEGER NOT NULL,
+                seed_hauling_per_ton    TEXT NOT NULL,
+                base_loan_rate          TEXT NOT NULL,
+                posted_on               TEXT NOT NULL
+            )
+            """,
+        ),
+    ),
 )
 
 LATEST = MIGRATIONS[-1].version
