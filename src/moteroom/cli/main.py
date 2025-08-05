@@ -20,6 +20,7 @@ from moteroom.cli.ginning import lot
 from moteroom.cli.press import bale
 from moteroom.cli.producers import producer
 from moteroom.cli.receiving import ticket
+from moteroom.cli.reports import report
 from moteroom.cli.settings import setting
 from moteroom.cli.settling import settle
 from moteroom.cli.warehousing import order, receipt
@@ -85,6 +86,7 @@ main.add_command(card)
 main.add_command(receipt)
 main.add_command(order)
 main.add_command(settle)
+main.add_command(report)
 
 
 def run() -> int:
