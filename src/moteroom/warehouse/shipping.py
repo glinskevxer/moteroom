@@ -88,4 +88,5 @@ def plan_loads(receipts: Sequence[Receipt], per_truck: int = TRUCKLOAD) -> list[
 
 
 def load_weight(receipts: Iterable[Receipt]) -> Weight:
+    """What a load weighs, which the haulier asks before the truck comes."""
     return total([receipt.net for receipt in receipts])

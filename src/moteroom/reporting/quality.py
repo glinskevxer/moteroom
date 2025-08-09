@@ -69,10 +69,12 @@ def class_distribution(cards: Sequence[ClassingRecord]) -> Report:
 
 
 def leaf_distribution(cards: Sequence[ClassingRecord]) -> Report:
+    """Bales by leaf grade, which the classer calls by eye."""
     return _distribution("leaf", "grade", cards, lambda card: str(card.leaf))
 
 
 def staple_distribution(cards: Sequence[ClassingRecord]) -> Report:
+    """Bales by staple, which is what a spinner buys on."""
     return _distribution("staple", "staple", cards, lambda card: str(card.staple))
 
 

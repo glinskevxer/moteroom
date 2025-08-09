@@ -36,7 +36,7 @@ def statement_lines(made: Statement) -> list[tuple[str, str]]:
 
 @click.group()
 def settle() -> None:
-    """Paying producers."""
+    """Paying producers what the season came to."""
 
 
 @settle.command("rates")

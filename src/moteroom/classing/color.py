@@ -71,6 +71,7 @@ GRADE_BANDS: dict[int, tuple[tuple[int, Decimal], ...]] = {
 
 
 def clean_reading(value: Decimal, field: str, low: Decimal, high: Decimal) -> Decimal:
+    """One instrument reading, checked against the range it can report."""
     if not isinstance(value, Decimal):
         raise ValidationError(field, "must be a Decimal")
     if value != value.quantize(TENTH):

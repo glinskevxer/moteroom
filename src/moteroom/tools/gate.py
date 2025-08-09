@@ -63,4 +63,5 @@ def main_for(name: str, gate: object) -> int:
 
 
 def exit_with(status: int) -> None:
+    """Leave with a status, which is all a gate module does at the end."""
     sys.exit(status)

@@ -79,6 +79,7 @@ def run() -> tuple[list[Finding], int]:
 
 
 def main() -> int:
+    """Run the gate and give back a shell exit status."""
     findings, checked = run()
     return report("check_migrations", findings, checked)
 

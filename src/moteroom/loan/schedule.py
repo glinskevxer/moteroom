@@ -203,6 +203,7 @@ def leaf_points(grade: int) -> Decimal:
 
 
 def extraneous_points(code: str) -> Decimal:
+    """What the schedule takes off for one extraneous finding."""
     try:
         return EXTRANEOUS_POINTS[code]
     except KeyError as exc:

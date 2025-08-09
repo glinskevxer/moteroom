@@ -1,4 +1,4 @@
-"""Warehouse commands."""
+"""Warehouse commands: receipts in and out, and the orders that move them."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from moteroom.warehouse.shipping import ShippingOrder, check_against, plan_loads
 
 @click.group()
 def receipt() -> None:
-    """Warehouse receipts."""
+    """Warehouse receipts, in and out of store."""
 
 
 @receipt.command("issue")
@@ -105,7 +105,7 @@ def list_receipts(session: Session, house: str | None) -> None:
 
 @click.group()
 def order() -> None:
-    """Shipping orders."""
+    """Shipping orders against receipts in store."""
 
 
 @order.command("write")

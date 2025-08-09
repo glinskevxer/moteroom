@@ -54,6 +54,7 @@ def as_csv(function: Callable[..., None]) -> Callable[..., None]:
 
 
 def emit(report: Report, csv_out: bool) -> None:
+    """Print a report either as a table or as csv."""
     click.echo(report.to_csv() if csv_out else render_report(report))
 
 

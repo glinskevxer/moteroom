@@ -30,14 +30,17 @@ def percent(part: Weight, whole: Weight) -> Decimal:
 
 
 def lint_turnout(run: GinRun) -> Decimal:
+    """Lint out over seed cotton in, which is the number that matters."""
     return percent(run.lint, run.seed_cotton)
 
 
 def seed_turnout(run: GinRun) -> Decimal:
+    """Seed out over seed cotton in."""
     return percent(run.seed, run.seed_cotton)
 
 
 def mote_fraction(run: GinRun) -> Decimal:
+    """What the mote room caught, as a share of the lot."""
     return percent(run.motes, run.seed_cotton)
 
 

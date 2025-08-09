@@ -111,10 +111,12 @@ def oldest_bale(receipts: Sequence[Receipt]) -> Receipt | None:
 
 
 def net_in_store(receipts: Sequence[Receipt]) -> Weight:
+    """Lint still in store, which is what the position adds to."""
     return total([receipt.net for receipt in receipts if receipt.is_outstanding])
 
 
 def money_in_store(receipts: Sequence[Receipt], tariff: Tariff, as_of: date) -> Money:
+    """What the bales still in store have run up in charges."""
     return total_money(
         [
             charge_for(receipt, tariff, as_of).total

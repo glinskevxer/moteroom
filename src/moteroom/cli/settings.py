@@ -1,4 +1,4 @@
-"""Settings commands."""
+"""Settings commands: reading and writing the plant's own values."""
 
 from __future__ import annotations
 

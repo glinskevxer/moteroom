@@ -97,4 +97,5 @@ def total_paid(statements: Sequence[Statement]) -> Money:
 
 
 def total_lint(statements: Sequence[Statement]) -> Weight:
+    """Lint across every settlement given."""
     return total([one.lint for one in statements])
