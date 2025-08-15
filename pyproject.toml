@@ -12,6 +12,15 @@ license = { text = "Proprietary" }
 authors = [{ name = "glinskevxer" }]
 dependencies = ["click==8.1.8"]
 
+[project.optional-dependencies]
+dev = [
+  "pytest==8.3.4",
+  "pytest-cov==6.0.0",
+  "coverage==7.6.12",
+  "ruff==0.9.7",
+  "mypy==1.15.0",
+]
+
 [project.scripts]
 moteroom = "moteroom.cli.main:main"
 
