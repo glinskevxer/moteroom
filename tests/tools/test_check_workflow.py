@@ -27,12 +27,13 @@ def test_the_gate_exits_clean():
 def test_the_gates_are_found_off_the_tools_folder():
     modules = gate_modules()
     assert "check_migrations" in modules
-    assert "check_workflow" not in modules
+    assert "check_workflow" in modules
+    assert "release_check" not in modules
 
 
 def test_the_workflow_names_the_gates_it_runs():
     named = _named_gates(WORKFLOW.read_text(encoding="utf-8"))
-    assert set(named) == set(gate_modules())
+    assert set(named) == {*gate_modules(), "release_check"}
 
 
 def test_both_python_versions_are_tested():

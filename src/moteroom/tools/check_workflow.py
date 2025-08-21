@@ -20,9 +20,7 @@ REQUIRED_STEPS = ("ruff check", "ruff format --check", "mypy", "pytest")
 def gate_modules() -> list[str]:
     """Every check module in the tools package."""
     here = Path(__file__).resolve().parent
-    return sorted(
-        path.stem for path in here.glob("check_*.py") if path.stem != "check_workflow"
-    )
+    return sorted(path.stem for path in here.glob("check_*.py"))
 
 
 def run() -> tuple[list[Finding], int]:
@@ -31,11 +29,11 @@ def run() -> tuple[list[Finding], int]:
     if not WORKFLOW.exists():
         return [Finding("ci.yml", "there is no workflow")], 0
     text = WORKFLOW.read_text(encoding="utf-8")
-    for module in gate_modules():
+    for module in [*gate_modules(), "release_check"]:
         if f"moteroom.tools.{module}" not in text:
             findings.append(Finding(module, "is a gate the workflow does not run"))
     for named in _named_gates(text):
-        if named not in {*gate_modules(), "check_workflow"}:
+        if named not in {*gate_modules(), "release_check"}:
             findings.append(Finding(named, "is run by the workflow and does not exist"))
     for step in REQUIRED_STEPS:
         if step not in text:
