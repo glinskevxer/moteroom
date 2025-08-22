@@ -18,7 +18,7 @@ from moteroom.core.money import CentsPerPound, Money
 from moteroom.core.season import Season
 from moteroom.settlement.charges import ChargeSchedule
 from moteroom.settlement.seed import SeedTerms
-from moteroom.settlement.service import Terms
+from moteroom.settlement.terms import Terms
 
 COLUMNS = (
     "season, ginning_per_cwt, bagging_and_ties, module_handling, drying_per_cwt, "
@@ -103,18 +103,7 @@ class RatesRepository:
 
     def lines(self, season: Season) -> list[tuple[str, str]]:
         """The posted rates as they print on the notice board."""
-        terms = self.get(season)
-        return [
-            ("ginning per cwt", str(terms.charges.ginning_per_cwt)),
-            ("bagging and ties", str(terms.charges.bagging_and_ties)),
-            ("module handling", str(terms.charges.module_handling)),
-            ("drying per cwt", str(terms.charges.drying_per_cwt)),
-            ("minimum per bale", str(terms.charges.minimum_per_bale)),
-            ("seed per ton", str(terms.seed.price_per_ton)),
-            ("seed shares", f"{terms.seed.gin_shares}:{terms.seed.producer_shares}"),
-            ("seed hauling per ton", str(terms.seed.hauling_per_ton)),
-            ("base loan rate", str(terms.base_rate)),
-        ]
+        return self.get(season).lines()
 
 
 def default_terms() -> Terms:

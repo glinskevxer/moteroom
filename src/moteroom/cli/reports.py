@@ -21,7 +21,7 @@ from moteroom.core.money import Money
 from moteroom.reporting import daily, position, quality
 from moteroom.reporting.report import Report
 from moteroom.reporting.settlement import settlement_summary, statement_report, unsettled
-from moteroom.settlement.service import SettlementService
+from moteroom.service.settlement import SettlementService
 from moteroom.storage.cards import CardRepository
 from moteroom.storage.lots import BaleRepository, LotRepository
 from moteroom.storage.rates import RatesRepository, default_terms

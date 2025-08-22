@@ -26,8 +26,13 @@ def test_the_command_line_is_allowed_to_know_the_rest():
     assert {"storage", "reporting"} <= ALLOWED["cli"]
 
 
-def test_the_one_exception_is_written_down():
-    assert ("settlement.service", "storage") in EXCEPTIONS
+def test_there_are_no_exceptions_left():
+    assert set() == EXCEPTIONS
+
+
+def test_the_service_layer_is_the_one_allowed_to_reach_storage():
+    assert "storage" in ALLOWED["service"]
+    assert "service" not in ALLOWED["storage"]
 
 
 def test_a_package_is_read_off_a_dotted_name():

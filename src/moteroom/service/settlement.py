@@ -17,28 +17,21 @@ from dataclasses import dataclass
 from datetime import date
 
 from moteroom.core.errors import ValidationError
+from moteroom.core.ids import LotId
 from moteroom.core.money import CentsPerPound, Money, total_money
 from moteroom.core.season import Season
 from moteroom.core.weight import Weight, total
 from moteroom.loan import pool
 from moteroom.settlement.allocation import allocate, divide_count
-from moteroom.settlement.charges import ChargeSchedule, bill
-from moteroom.settlement.seed import SeedTerms, credit
+from moteroom.settlement.charges import bill
+from moteroom.settlement.seed import credit
 from moteroom.settlement.statement import Statement
+from moteroom.settlement.terms import Terms
 from moteroom.storage.book import Book
 from moteroom.storage.cards import CardRepository
 from moteroom.storage.lots import BaleRepository, LotRepository
 from moteroom.storage.settlement import AdvanceRepository
 from moteroom.storage.tickets import TicketRepository
-
-
-@dataclass(frozen=True)
-class Terms:
-    """Everything a season is settled against."""
-
-    charges: ChargeSchedule
-    seed: SeedTerms
-    base_rate: CentsPerPound
 
 
 @dataclass(frozen=True)
@@ -73,8 +66,6 @@ class SettlementService:
 
     def rate_for_lot(self, lot_number: int, season: Season) -> tuple[CentsPerPound, bool]:
         """What the bales off a lot actually classed at."""
-        from moteroom.core.ids import LotId
-
         lot = LotId(season, lot_number)
         pairs = []
         for one in self.bales.for_lot(lot):

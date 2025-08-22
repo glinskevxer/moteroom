@@ -16,7 +16,7 @@ from moteroom.cli.context import Session
 from moteroom.cli.output import render_pairs, render_table
 from moteroom.cli.receiving import read_date
 from moteroom.core.money import Money
-from moteroom.settlement.service import SettlementService
+from moteroom.service.settlement import SettlementService
 from moteroom.settlement.statement import Advance, Statement
 from moteroom.storage.rates import RatesRepository, default_terms
 from moteroom.storage.settlement import AdvanceRepository, StatementRepository

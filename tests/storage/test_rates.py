@@ -8,7 +8,7 @@ from moteroom.core.money import CentsPerPound, Money
 from moteroom.core.season import Season
 from moteroom.settlement.charges import ChargeSchedule
 from moteroom.settlement.seed import SeedTerms
-from moteroom.settlement.service import Terms
+from moteroom.settlement.terms import Terms
 from moteroom.storage.book import Book
 from moteroom.storage.rates import RatesRepository, default_terms
 

@@ -16,10 +16,11 @@ from moteroom.ginning.run import GinRun
 from moteroom.press.bale import Bale
 from moteroom.receiving.party import Producer
 from moteroom.receiving.ticket import ModuleTicket
+from moteroom.service.settlement import SettlementService
 from moteroom.settlement.charges import ChargeSchedule
 from moteroom.settlement.seed import SeedTerms
-from moteroom.settlement.service import SettlementService, Terms
 from moteroom.settlement.statement import Advance
+from moteroom.settlement.terms import Terms
 from moteroom.storage.book import Book
 from moteroom.storage.cards import CardRepository
 from moteroom.storage.lots import BaleRepository, LotRepository

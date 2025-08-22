@@ -30,14 +30,12 @@ ALLOWED: dict[str, set[str]] = {
     "settlement": CORE | DOMAIN,
     "storage": CORE | DOMAIN | {"storage"},
     "reporting": CORE | DOMAIN | {"reporting"},
-    "cli": CORE | DOMAIN | {"storage", "reporting", "cli"},
-    "tools": CORE | DOMAIN | {"storage", "reporting", "cli", "tools"},
+    "service": CORE | DOMAIN | {"storage", "service"},
+    "cli": CORE | DOMAIN | {"storage", "reporting", "service", "cli"},
+    "tools": CORE | DOMAIN | {"storage", "reporting", "service", "cli", "tools"},
 }
 
-# settlement.service reaches into storage because it is a service sitting on top
-# of it rather than a domain module. It belongs in a layer of its own and this
-# line is the reminder that it does not have one yet.
-EXCEPTIONS: set[tuple[str, str]] = {("settlement.service", "storage")}
+EXCEPTIONS: set[tuple[str, str]] = set()
 
 
 def _package_of(dotted: str) -> str:
