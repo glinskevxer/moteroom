@@ -12,6 +12,8 @@ from moteroom.core.errors import ValidationError
 from moteroom.core.ids import ModuleId
 from moteroom.core.weight import Weight
 from moteroom.receiving.ticket import ModuleTicket, clean_moisture
+from moteroom.receiving.yard import ModuleYard
+from moteroom.storage.lots import LotRepository
 from moteroom.storage.tickets import TicketRepository
 
 
@@ -152,3 +154,43 @@ def show_ticket(session: Session, number: int) -> None:
             ]
         )
     )
+
+
+@ticket.command("yard")
+@click.option("--as-of", "as_of", default=None, help="Yard date, YYYY-MM-DD.")
+@click.pass_obj
+def yard(session: Session, as_of: str | None) -> None:
+    """What is still in the yard, worst first."""
+    book = session.require_book()
+    when = read_date(as_of, date.today())
+    tickets = TicketRepository(book.connection)
+    held = tickets.book(session.season)
+    ginned = LotRepository(book.connection).assigned_tickets(session.season)
+    standing = ModuleYard()
+    for one in held.live():
+        standing.receive(one)
+        if one.number in ginned:
+            standing.gin(one.number)
+    rows = [
+        [
+            str(line.ticket.number),
+            str(line.ticket.module),
+            line.ticket.producer,
+            str(line.ticket.net.pounds),
+            f"{line.ticket.moisture}",
+            str(line.days),
+            line.reason,
+        ]
+        for line in standing.running_order(when)
+    ]
+    click.echo(
+        render_table(
+            ["ticket", "module", "producer", "net", "moisture", "days", "why"],
+            rows,
+            right=(0, 3, 4, 5),
+        )
+    )
+    urgent = standing.urgent(when)
+    if urgent:
+        click.echo()
+        click.echo(f"{len(urgent)} modules are past their hold")

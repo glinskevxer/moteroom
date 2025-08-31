@@ -126,3 +126,42 @@ def test_read_date_falls_back_to_the_day_given():
 def test_read_date_refuses_junk():
     with pytest.raises(ValidationError):
         read_date("14/10/2025", date(2025, 8, 1))
+
+
+def test_the_yard_shows_what_is_waiting(seeded):
+    weigh(seeded, on="2025-10-14")
+    weigh(seeded, module="HW-004183", on="2025-10-14", moisture="12.0")
+    listed = seeded("ticket", "yard", "--as-of", "2025-10-15")
+    assert listed.output.index("HW-004183") < listed.output.index("HW-004182")
+    assert "wet" in listed.output
+
+
+def test_the_yard_drops_a_module_once_it_is_ginned(seeded):
+    weigh(seeded, on="2025-10-14")
+    weigh(seeded, module="HW-004183", on="2025-10-14")
+    seeded(
+        "lot",
+        "gin",
+        "1",
+        "--lint",
+        "7400",
+        "--seed",
+        "11800",
+        "--motes",
+        "1300",
+        "--on",
+        "2025-10-16",
+    )
+    listed = seeded("ticket", "yard", "--as-of", "2025-10-16")
+    assert "HW-004182" not in listed.output
+    assert "HW-004183" in listed.output
+
+
+def test_the_yard_warns_about_a_module_held_too_long(seeded):
+    weigh(seeded, on="2025-10-14", moisture="12.0")
+    listed = seeded("ticket", "yard", "--as-of", "2025-10-30")
+    assert "past their hold" in listed.output
+
+
+def test_an_empty_yard_says_nothing(seeded):
+    assert "(nothing)" in seeded("ticket", "yard", "--as-of", "2025-10-15").output
