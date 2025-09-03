@@ -26,26 +26,22 @@ class TicketRepository(Repository):
     """Scale tickets, one table, keyed by season and number."""
 
     def add(self, ticket: ModuleTicket) -> None:
-        try:
-            self.connection.execute(
-                f"INSERT INTO tickets ({COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    ticket.number,
-                    ticket.season.year,
-                    str(ticket.module),
-                    ticket.producer,
-                    ticket.farm,
-                    ticket.weighed_on.isoformat(),
-                    ticket.gross.pounds,
-                    ticket.tare.pounds,
-                    str(ticket.moisture),
-                    ticket.voids,
-                ),
-            )
-        except sqlite3.IntegrityError as exc:
-            raise ConflictError(
-                "ticket", str(ticket.number), "will not go in the book"
-            ) from exc
+        self.write(
+            f"INSERT INTO tickets ({COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                ticket.number,
+                ticket.season.year,
+                str(ticket.module),
+                ticket.producer,
+                ticket.farm,
+                ticket.weighed_on.isoformat(),
+                ticket.gross.pounds,
+                ticket.tare.pounds,
+                str(ticket.moisture),
+                ticket.voids,
+            ),
+            lambda: ConflictError("ticket", str(ticket.number), "will not go in the book"),
+        )
 
     def get(self, season: Season, number: int) -> ModuleTicket:
         row = self.connection.execute(

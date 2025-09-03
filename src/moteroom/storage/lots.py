@@ -8,6 +8,7 @@ reports a turnout off nothing.
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Callable
 from datetime import date
 from decimal import Decimal
 
@@ -28,8 +29,9 @@ class LotRepository(Repository):
     """Lots, with the tickets each one ginned."""
 
     def add(self, run: GinRun) -> None:
-        try:
-            self.connection.execute(
+        refuse = _named(lambda: ConflictError("lot", str(run.lot), "will not go in the book"))
+        with self.atomic():
+            self.write(
                 f"INSERT INTO lots ({LOT_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, 0)",
                 (
                     run.lot.season.year,
@@ -40,13 +42,13 @@ class LotRepository(Repository):
                     run.seed.pounds,
                     run.motes.pounds,
                 ),
+                refuse,
             )
-            self.connection.executemany(
+            self.write_many(
                 "INSERT INTO lot_tickets (season, lot, ticket) VALUES (?, ?, ?)",
                 [(run.lot.season.year, run.lot.number, ticket) for ticket in run.tickets],
+                refuse,
             )
-        except sqlite3.IntegrityError as exc:
-            raise ConflictError("lot", str(run.lot), "will not go in the book") from exc
 
     def get(self, lot: LotId) -> GinRun:
         row = self.connection.execute(
@@ -123,22 +125,20 @@ class BaleRepository(Repository):
     """Bales, keyed by the tag the press printed."""
 
     def add(self, bale: Bale) -> None:
-        try:
-            self.connection.execute(
-                f"INSERT INTO bales ({BALE_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    str(bale.bale_id),
-                    bale.lot.season.year,
-                    bale.lot.number,
-                    bale.number,
-                    bale.pressed_on.isoformat(),
-                    bale.gross.pounds,
-                    bale.tare.pounds,
-                    str(bale.moisture),
-                ),
-            )
-        except sqlite3.IntegrityError as exc:
-            raise ConflictError("bale", str(bale.bale_id), "will not go in the book") from exc
+        self.write(
+            f"INSERT INTO bales ({BALE_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                str(bale.bale_id),
+                bale.lot.season.year,
+                bale.lot.number,
+                bale.number,
+                bale.pressed_on.isoformat(),
+                bale.gross.pounds,
+                bale.tare.pounds,
+                str(bale.moisture),
+            ),
+            lambda: ConflictError("bale", str(bale.bale_id), "will not go in the book"),
+        )
 
     def get(self, bale_id: BaleId) -> Bale:
         row = self.connection.execute(
@@ -179,3 +179,8 @@ class BaleRepository(Repository):
             tare=Weight(int(row["tare"])),
             moisture=Decimal(row["moisture"]),
         )
+
+
+def _named(refusal: Callable[[], Exception]) -> Callable[[], Exception]:
+    """Keep one refusal for a pair of writes that stand or fall together."""
+    return refusal

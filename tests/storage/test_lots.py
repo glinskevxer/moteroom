@@ -160,3 +160,19 @@ def test_the_press_counter_rebuilds_off_the_book(book):
     press = bales.press(SEASON, GIN)
     assert press.next_number == 8
     assert len(press) == 1
+
+
+def test_a_lot_and_its_tickets_go_in_together_or_not_at_all(book):
+    lots = LotRepository(book.connection)
+    with pytest.raises(ConflictError):
+        lots.add(run(tickets=(1, 9)))
+    assert lots.for_season(SEASON) == []
+
+
+def test_a_bale_refused_by_a_constraint_names_the_bale(book):
+    LotRepository(book.connection).add(run())
+    bales = BaleRepository(book.connection)
+    bales.add(bale(1))
+    with pytest.raises(ConflictError) as caught:
+        bales.add(bale(1))
+    assert caught.value.key == str(bale(1).bale_id)

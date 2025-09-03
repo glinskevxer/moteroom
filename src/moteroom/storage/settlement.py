@@ -25,22 +25,18 @@ class AdvanceRepository(Repository):
     """Money paid out during the season, by producer."""
 
     def add(self, season: Season, producer: str, advance: Advance, paid_on: date) -> None:
-        try:
-            self.connection.execute(
-                "INSERT INTO advances (season, producer, reference, amount, paid_on) "
-                "VALUES (?, ?, ?, ?, ?)",
-                (
-                    season.year,
-                    producer,
-                    advance.reference,
-                    str(advance.amount.amount),
-                    paid_on.isoformat(),
-                ),
-            )
-        except sqlite3.IntegrityError as exc:
-            raise ConflictError(
-                "advance", advance.reference, "will not go in the book"
-            ) from exc
+        self.write(
+            "INSERT INTO advances (season, producer, reference, amount, paid_on) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (
+                season.year,
+                producer,
+                advance.reference,
+                str(advance.amount.amount),
+                paid_on.isoformat(),
+            ),
+            lambda: ConflictError("advance", advance.reference, "will not go in the book"),
+        )
 
     def for_producer(self, season: Season, producer: str) -> tuple[Advance, ...]:
         rows = self.connection.execute(
@@ -63,24 +59,22 @@ class StatementRepository(Repository):
         self.advances = AdvanceRepository(connection)
 
     def save(self, statement: Statement, settled_on: date) -> None:
-        try:
-            self.connection.execute(
-                f"INSERT INTO statements ({COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    statement.season.year,
-                    statement.producer,
-                    statement.bales,
-                    statement.lint.pounds,
-                    str(statement.lint_proceeds.amount),
-                    str(statement.gin_charges.amount),
-                    str(statement.seed_credit.amount),
-                    settled_on.isoformat(),
-                ),
-            )
-        except sqlite3.IntegrityError as exc:
-            raise ConflictError(
+        self.write(
+            f"INSERT INTO statements ({COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                statement.season.year,
+                statement.producer,
+                statement.bales,
+                statement.lint.pounds,
+                str(statement.lint_proceeds.amount),
+                str(statement.gin_charges.amount),
+                str(statement.seed_credit.amount),
+                settled_on.isoformat(),
+            ),
+            lambda: ConflictError(
                 "statement", statement.producer, "is already settled for this season"
-            ) from exc
+            ),
+        )
 
     def get(self, season: Season, producer: str) -> Statement:
         row = self.connection.execute(

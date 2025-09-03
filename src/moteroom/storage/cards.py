@@ -9,6 +9,7 @@ nothing.
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Callable
 from datetime import date
 from decimal import Decimal
 
@@ -31,10 +32,7 @@ class CardRepository(Repository):
     """Classing cards, one per bale, with their findings alongside."""
 
     def add(self, card: ClassingRecord) -> None:
-        try:
-            self._write(card)
-        except sqlite3.IntegrityError as exc:
-            raise ConflictError("card", str(card.bale_id), "will not go in the book") from exc
+        self._insert(card)
 
     def replace(self, card: ClassingRecord) -> None:
         """Take a corrected card, findings and all."""
@@ -43,7 +41,7 @@ class CardRepository(Repository):
             raise NotFoundError("card", key)
         self.connection.execute("DELETE FROM card_extraneous WHERE bale_id = ?", (key,))
         self.connection.execute("DELETE FROM cards WHERE bale_id = ?", (key,))
-        self._write(card)
+        self._insert(card)
 
     def get(self, bale_id: BaleId) -> ClassingRecord:
         row = self.connection.execute(
@@ -81,26 +79,30 @@ class CardRepository(Repository):
         )
         return [BaleId(row["bale_id"]) for row in rows]
 
-    def _write(self, card: ClassingRecord) -> None:
-        self.connection.execute(
-            f"INSERT INTO cards ({COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                str(card.bale_id),
-                card.classed_on.isoformat(),
-                card.office,
-                str(card.micronaire.reading),
-                card.staple.thirty_seconds,
-                str(card.strength.grams_per_tex),
-                str(card.uniformity.percent),
-                card.color.code,
-                card.leaf.grade,
-                str(card.trash.percent),
-            ),
-        )
-        self.connection.executemany(
-            "INSERT INTO card_extraneous (bale_id, code) VALUES (?, ?)",
-            [(str(card.bale_id), code) for code in card.codes],
-        )
+    def _insert(self, card: ClassingRecord) -> None:
+        refuse = _refusing(card)
+        with self.atomic():
+            self.write(
+                f"INSERT INTO cards ({COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    str(card.bale_id),
+                    card.classed_on.isoformat(),
+                    card.office,
+                    str(card.micronaire.reading),
+                    card.staple.thirty_seconds,
+                    str(card.strength.grams_per_tex),
+                    str(card.uniformity.percent),
+                    card.color.code,
+                    card.leaf.grade,
+                    str(card.trash.percent),
+                ),
+                refuse,
+            )
+            self.write_many(
+                "INSERT INTO card_extraneous (bale_id, code) VALUES (?, ?)",
+                [(str(card.bale_id), code) for code in card.codes],
+                refuse,
+            )
 
     def _findings(self, bale_id: str) -> tuple[Extraneous, ...]:
         rows = self.connection.execute(
@@ -122,3 +124,8 @@ class CardRepository(Repository):
             trash=Trash(Decimal(row["trash"])),
             extraneous=self._findings(row["bale_id"]),
         )
+
+
+def _refusing(card: ClassingRecord) -> Callable[[], Exception]:
+    """The error a card that will not go in the book comes back as."""
+    return lambda: ConflictError("card", str(card.bale_id), "will not go in the book")

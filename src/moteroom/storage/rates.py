@@ -9,7 +9,6 @@ overwriting the first.
 
 from __future__ import annotations
 
-import sqlite3
 from datetime import date
 from decimal import Decimal
 
@@ -44,27 +43,24 @@ class RatesRepository(Repository):
 
     def post(self, season: Season, terms: Terms, posted_on: date) -> None:
         """Post a season's rates, which can only happen once."""
-        try:
-            self.connection.execute(
-                f"INSERT INTO season_rates ({COLUMNS}) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    season.year,
-                    str(terms.charges.ginning_per_cwt.amount),
-                    str(terms.charges.bagging_and_ties.amount),
-                    str(terms.charges.module_handling.amount),
-                    str(terms.charges.drying_per_cwt.amount),
-                    str(terms.charges.minimum_per_bale.amount),
-                    str(terms.seed.price_per_ton.amount),
-                    terms.seed.gin_shares,
-                    terms.seed.producer_shares,
-                    str(terms.seed.hauling_per_ton.amount),
-                    str(terms.base_rate.cents),
-                    posted_on.isoformat(),
-                ),
-            )
-        except sqlite3.IntegrityError as exc:
-            raise ConflictError("rates", str(season), "are already posted") from exc
+        self.write(
+            f"INSERT INTO season_rates ({COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                season.year,
+                str(terms.charges.ginning_per_cwt.amount),
+                str(terms.charges.bagging_and_ties.amount),
+                str(terms.charges.module_handling.amount),
+                str(terms.charges.drying_per_cwt.amount),
+                str(terms.charges.minimum_per_bale.amount),
+                str(terms.seed.price_per_ton.amount),
+                terms.seed.gin_shares,
+                terms.seed.producer_shares,
+                str(terms.seed.hauling_per_ton.amount),
+                str(terms.base_rate.cents),
+                posted_on.isoformat(),
+            ),
+            lambda: ConflictError("rates", str(season), "are already posted"),
+        )
 
     def get(self, season: Season) -> Terms:
         row = self.connection.execute(

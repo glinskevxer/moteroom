@@ -101,3 +101,11 @@ def test_statements_come_back_in_producer_order(book):
     statements.save(statement(producer="MERRITT"), date(2026, 2, 3))
     statements.save(statement(), date(2026, 2, 3))
     assert [s.producer for s in statements.for_season(SEASON)] == ["BLYTHE", "MERRITT"]
+
+
+def test_an_advance_refused_by_a_constraint_names_the_reference(book):
+    advances = AdvanceRepository(book.connection)
+    advances.add(SEASON, "BLYTHE", Advance("A-114", Money.parse("5000.00")), date(2025, 11, 3))
+    with pytest.raises(ConflictError) as caught:
+        advances.add(SEASON, "BLYTHE", Advance("A-114", Money.parse("1.00")), date(2025, 11, 4))
+    assert caught.value.key == "A-114"

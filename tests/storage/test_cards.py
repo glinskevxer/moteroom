@@ -135,3 +135,16 @@ def test_the_unclassed_bales_are_the_ones_with_no_card(cards):
     cards.add(card(1))
     waiting = cards.unclassed(SEASON)
     assert [b.bale_number for b in waiting] == [2]
+
+
+def test_a_card_and_its_findings_go_in_together(cards):
+    with pytest.raises(ConflictError):
+        cards.add(card(9, extraneous=(Extraneous.parse("B2"),)))
+    assert cards.for_season(SEASON) == []
+
+
+def test_a_refused_card_names_the_bale(cards):
+    cards.add(card(1))
+    with pytest.raises(ConflictError) as caught:
+        cards.add(card(1))
+    assert caught.value.key == str(BaleId.build(SEASON, GIN, 1))

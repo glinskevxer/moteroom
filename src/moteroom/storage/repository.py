@@ -10,7 +10,9 @@ actually different about them.
 from __future__ import annotations
 
 import sqlite3
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
+from contextlib import contextmanager
+from itertools import count
 from typing import Any
 
 ConflictNamer = Callable[[], Exception]
@@ -56,6 +58,27 @@ class Repository:
         except sqlite3.IntegrityError as exc:
             raise on_conflict() from exc
 
+    @contextmanager
+    def atomic(self) -> Iterator[None]:
+        """A savepoint around writes that have to land together.
+
+        Two inserts that make one record cannot be left half done, and the
+        caller may or may not already be inside a transaction, so a savepoint
+        rather than a transaction is what nests safely.
+        """
+        name = f"sp_{next(_SAVEPOINTS)}"
+        self.connection.execute(f"SAVEPOINT {name}")
+        try:
+            yield
+        except BaseException:
+            self.connection.execute(f"ROLLBACK TO {name}")
+            self.connection.execute(f"RELEASE {name}")
+            raise
+        self.connection.execute(f"RELEASE {name}")
+
     def changed(self, sql: str, params: Sequence[Any] = ()) -> int:
         """How many rows a statement touched, which is how an update reports."""
         return int(self.connection.execute(sql, tuple(params)).rowcount)
+
+
+_SAVEPOINTS = count(1)

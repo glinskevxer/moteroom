@@ -9,6 +9,7 @@ for the same bale is exactly what the register exists to stop.
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Callable
 from datetime import date
 
 from moteroom.core.errors import ConflictError, NotFoundError
@@ -31,22 +32,20 @@ class ReceiptRepository(Repository):
     def issue(self, receipt: Receipt) -> None:
         if self.for_bale(receipt.bale_id) is not None:
             raise ConflictError("bale", str(receipt.bale_id), "is already receipted")
-        try:
-            self.connection.execute(
-                f"INSERT INTO receipts ({RECEIPT_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    receipt.number,
-                    receipt.warehouse,
-                    str(receipt.bale_id),
-                    receipt.received_on.isoformat(),
-                    receipt.net.pounds,
-                    receipt.holder,
-                    int(receipt.electronic),
-                    receipt.released_on.isoformat() if receipt.released_on else None,
-                ),
-            )
-        except sqlite3.IntegrityError as exc:
-            raise ConflictError("receipt", receipt.number, "will not go in the book") from exc
+        self.write(
+            f"INSERT INTO receipts ({RECEIPT_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                receipt.number,
+                receipt.warehouse,
+                str(receipt.bale_id),
+                receipt.received_on.isoformat(),
+                receipt.net.pounds,
+                receipt.holder,
+                int(receipt.electronic),
+                receipt.released_on.isoformat() if receipt.released_on else None,
+            ),
+            lambda: ConflictError("receipt", receipt.number, "will not go in the book"),
+        )
 
     def release(self, number: str, on: date, to: str) -> Receipt:
         held = self.get(number)
@@ -119,8 +118,9 @@ class OrderRepository(Repository):
     """Shipping orders and the receipts they call for."""
 
     def add(self, order: ShippingOrder) -> None:
-        try:
-            self.connection.execute(
+        refuse = _named(lambda: ConflictError("order", order.number, "will not go in the book"))
+        with self.atomic():
+            self.write(
                 f"INSERT INTO orders ({ORDER_COLUMNS}) VALUES (?, ?, ?, ?, ?)",
                 (
                     order.number,
@@ -129,16 +129,16 @@ class OrderRepository(Repository):
                     order.buyer,
                     order.ship_by.isoformat() if order.ship_by else None,
                 ),
+                refuse,
             )
-            self.connection.executemany(
+            self.write_many(
                 "INSERT INTO order_receipts (order_number, receipt, position) VALUES (?, ?, ?)",
                 [
                     (order.number, receipt, position)
                     for position, receipt in enumerate(order.receipts)
                 ],
+                refuse,
             )
-        except sqlite3.IntegrityError as exc:
-            raise ConflictError("order", order.number, "will not go in the book") from exc
 
     def get(self, number: str) -> ShippingOrder:
         row = self.connection.execute(
@@ -163,3 +163,8 @@ class OrderRepository(Repository):
     def open_orders(self) -> list[ShippingOrder]:
         rows = self.connection.execute("SELECT number FROM orders ORDER BY number")
         return [self.get(row["number"]) for row in rows.fetchall()]
+
+
+def _named(refusal: Callable[[], Exception]) -> Callable[[], Exception]:
+    """Keep one refusal for a pair of writes that stand or fall together."""
+    return refusal
