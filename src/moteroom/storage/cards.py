@@ -20,17 +20,15 @@ from moteroom.classing.record import ClassingRecord
 from moteroom.core.errors import ConflictError, NotFoundError
 from moteroom.core.ids import BaleId
 from moteroom.core.season import Season
+from moteroom.storage.repository import Repository
 
 COLUMNS = (
     "bale_id, classed_on, office, micronaire, staple, strength, uniformity, color, leaf, trash"
 )
 
 
-class CardRepository:
+class CardRepository(Repository):
     """Classing cards, one per bale, with their findings alongside."""
-
-    def __init__(self, connection: sqlite3.Connection) -> None:
-        self.connection = connection
 
     def add(self, card: ClassingRecord) -> None:
         try:

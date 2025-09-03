@@ -17,15 +17,13 @@ from moteroom.core.season import Season
 from moteroom.core.weight import Weight
 from moteroom.receiving.book import TicketBook
 from moteroom.receiving.ticket import ModuleTicket
+from moteroom.storage.repository import Repository
 
 COLUMNS = "number, season, module, producer, farm, weighed_on, gross, tare, moisture, voids"
 
 
-class TicketRepository:
+class TicketRepository(Repository):
     """Scale tickets, one table, keyed by season and number."""
-
-    def __init__(self, connection: sqlite3.Connection) -> None:
-        self.connection = connection
 
     def add(self, ticket: ModuleTicket) -> None:
         try:

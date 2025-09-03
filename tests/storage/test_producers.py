@@ -18,7 +18,7 @@ def test_a_producer_saves_and_reads_back(book):
     people = ProducerRepository(book.connection)
     people.add(Producer("BLYTHE", "Blythe Farms"))
     assert people.get("BLYTHE").name == "Blythe Farms"
-    assert people.exists("BLYTHE")
+    assert people.has("BLYTHE")
     assert people.count() == 1
 
 
@@ -26,7 +26,7 @@ def test_a_producer_nobody_added(book):
     people = ProducerRepository(book.connection)
     with pytest.raises(NotFoundError):
         people.get("BLYTHE")
-    assert not people.exists("BLYTHE")
+    assert not people.has("BLYTHE")
 
 
 def test_the_same_code_twice_is_refused(book):
@@ -93,3 +93,26 @@ def test_farms_and_acres_come_back_per_producer(book):
     assert [f.key for f in farms.for_producer("BLYTHE")] == ["3312-1140", "3312-1141"]
     assert farms.acres_for("BLYTHE") == Decimal("404.75")
     assert farms.acres_for("NOBODY") == Decimal("0.00")
+
+
+def test_a_repository_reads_a_scalar_and_a_missing_one(book):
+    people = ProducerRepository(book.connection)
+    assert people.scalar("SELECT count(*) FROM producers") == 0
+    assert people.scalar("SELECT max(rowid) FROM producers") == 0
+    people.add(Producer("BLYTHE", "Blythe Farms"))
+    assert people.scalar("SELECT count(*) FROM producers") == 1
+
+
+def test_a_repository_counts_the_rows_a_write_touched(book):
+    people = ProducerRepository(book.connection)
+    people.add(Producer("BLYTHE", "Blythe Farms"))
+    assert people.changed("UPDATE producers SET name = 'x' WHERE code = 'BLYTHE'") == 1
+    assert people.changed("UPDATE producers SET name = 'x' WHERE code = 'NOBODY'") == 0
+
+
+def test_a_repository_names_the_record_a_constraint_refused(book):
+    people = ProducerRepository(book.connection)
+    people.add(Producer("BLYTHE", "Blythe Farms"))
+    with pytest.raises(ConflictError) as caught:
+        people.add(Producer("BLYTHE", "Blythe Brothers"))
+    assert caught.value.key == "BLYTHE"

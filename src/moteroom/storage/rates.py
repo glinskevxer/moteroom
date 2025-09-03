@@ -19,6 +19,7 @@ from moteroom.core.season import Season
 from moteroom.settlement.charges import ChargeSchedule
 from moteroom.settlement.seed import SeedTerms
 from moteroom.settlement.terms import Terms
+from moteroom.storage.repository import Repository
 
 COLUMNS = (
     "season, ginning_per_cwt, bagging_and_ties, module_handling, drying_per_cwt, "
@@ -38,11 +39,8 @@ DEFAULTS: dict[str, str] = {
 }
 
 
-class RatesRepository:
+class RatesRepository(Repository):
     """Posted rates, one row per season."""
-
-    def __init__(self, connection: sqlite3.Connection) -> None:
-        self.connection = connection
 
     def post(self, season: Season, terms: Terms, posted_on: date) -> None:
         """Post a season's rates, which can only happen once."""

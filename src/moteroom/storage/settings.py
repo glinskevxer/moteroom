@@ -8,13 +8,13 @@ record, and each one is validated on the way in rather than on the way out.
 
 from __future__ import annotations
 
-import sqlite3
 from collections.abc import Callable
 from datetime import date
 
 from moteroom.core.errors import NotFoundError, ValidationError
 from moteroom.core.ids import GinCode
 from moteroom.core.money import CentsPerPound
+from moteroom.storage.repository import Repository
 
 GIN_CODE = "gin_code"
 CLASSING_OFFICE = "classing_office"
@@ -52,11 +52,8 @@ KNOWN: dict[str, Callable[[str], str]] = {
 }
 
 
-class SettingsRepository:
+class SettingsRepository(Repository):
     """The settings table, with a validator per name."""
-
-    def __init__(self, connection: sqlite3.Connection) -> None:
-        self.connection = connection
 
     def set(self, name: str, value: str, changed_on: date) -> str:
         """Write a setting, refusing a name nobody knows or a bad value."""

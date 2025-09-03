@@ -14,6 +14,7 @@ from datetime import date
 from moteroom.core.errors import ConflictError, NotFoundError
 from moteroom.core.ids import BaleId
 from moteroom.core.weight import Weight
+from moteroom.storage.repository import Repository
 from moteroom.warehouse.receipt import Receipt
 from moteroom.warehouse.register import ReceiptRegister
 from moteroom.warehouse.shipping import ShippingOrder
@@ -24,11 +25,8 @@ RECEIPT_COLUMNS = (
 ORDER_COLUMNS = "number, warehouse, ordered_on, buyer, ship_by"
 
 
-class ReceiptRepository:
+class ReceiptRepository(Repository):
     """Warehouse receipts across every house the gin ships to."""
-
-    def __init__(self, connection: sqlite3.Connection) -> None:
-        self.connection = connection
 
     def issue(self, receipt: Receipt) -> None:
         if self.for_bale(receipt.bale_id) is not None:
@@ -117,11 +115,8 @@ class ReceiptRepository:
         )
 
 
-class OrderRepository:
+class OrderRepository(Repository):
     """Shipping orders and the receipts they call for."""
-
-    def __init__(self, connection: sqlite3.Connection) -> None:
-        self.connection = connection
 
     def add(self, order: ShippingOrder) -> None:
         try:

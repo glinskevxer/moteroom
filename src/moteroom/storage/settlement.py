@@ -16,15 +16,13 @@ from moteroom.core.money import Money
 from moteroom.core.season import Season
 from moteroom.core.weight import Weight
 from moteroom.settlement.statement import Advance, Statement
+from moteroom.storage.repository import Repository
 
 COLUMNS = "season, producer, bales, lint, lint_proceeds, gin_charges, seed_credit, settled_on"
 
 
-class AdvanceRepository:
+class AdvanceRepository(Repository):
     """Money paid out during the season, by producer."""
-
-    def __init__(self, connection: sqlite3.Connection) -> None:
-        self.connection = connection
 
     def add(self, season: Season, producer: str, advance: Advance, paid_on: date) -> None:
         try:
@@ -57,11 +55,11 @@ class AdvanceRepository:
         return Money(sum((a.amount.amount for a in advances), Decimal("0.00")))
 
 
-class StatementRepository:
+class StatementRepository(Repository):
     """Settlements, one per producer per season."""
 
     def __init__(self, connection: sqlite3.Connection) -> None:
-        self.connection = connection
+        super().__init__(connection)
         self.advances = AdvanceRepository(connection)
 
     def save(self, statement: Statement, settled_on: date) -> None:

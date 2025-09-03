@@ -18,16 +18,14 @@ from moteroom.core.weight import Weight, total
 from moteroom.ginning.run import GinRun
 from moteroom.press.bale import Bale
 from moteroom.press.run import BalePress
+from moteroom.storage.repository import Repository
 
 LOT_COLUMNS = "season, number, ginned_on, seed_cotton, lint, seed, motes, closed"
 BALE_COLUMNS = "bale_id, season, lot, number, pressed_on, gross, tare, moisture"
 
 
-class LotRepository:
+class LotRepository(Repository):
     """Lots, with the tickets each one ginned."""
-
-    def __init__(self, connection: sqlite3.Connection) -> None:
-        self.connection = connection
 
     def add(self, run: GinRun) -> None:
         try:
@@ -121,11 +119,8 @@ class LotRepository:
         )
 
 
-class BaleRepository:
+class BaleRepository(Repository):
     """Bales, keyed by the tag the press printed."""
-
-    def __init__(self, connection: sqlite3.Connection) -> None:
-        self.connection = connection
 
     def add(self, bale: Bale) -> None:
         try:
