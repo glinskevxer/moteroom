@@ -104,3 +104,30 @@ def test_read_tickets_reads_a_list():
 def test_read_tickets_refuses_junk(text):
     with pytest.raises(ValidationError):
         read_tickets(text)
+
+
+def test_a_shift_reports_its_rate(ginned):
+    made = ginned(
+        "lot", "shift", "07:00", "19:00", "360", "--stop", "choke:45", "--on", "2025-10-16"
+    )
+    assert made.exit_code == 0
+    assert "32.00 an hour running" in made.output
+    assert "choke 45 min" in made.output
+
+
+def test_a_shift_with_nothing_stopping_it(ginned):
+    made = ginned("lot", "shift", "07:00", "19:00", "360", "--on", "2025-10-16")
+    assert "nothing stopped it" in made.output
+    assert "100.00%" in made.output
+
+
+def test_a_stoppage_that_will_not_read(ginned):
+    assert ginned("lot", "shift", "07:00", "19:00", "360", "--stop", "choke").exit_code != 0
+
+
+def test_a_time_that_will_not_read(ginned):
+    assert ginned("lot", "shift", "seven", "19:00", "360").exit_code != 0
+
+
+def test_a_stoppage_longer_than_the_shift(ginned):
+    assert ginned("lot", "shift", "07:00", "19:00", "360", "--stop", "choke:900").exit_code != 0

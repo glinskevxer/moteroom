@@ -7,6 +7,8 @@ disagrees with its own tickets is a lot nobody can settle off.
 
 from __future__ import annotations
 
+from datetime import datetime, time
+
 import click
 
 from moteroom.cli.context import Session
@@ -15,11 +17,20 @@ from moteroom.cli.receiving import read_date
 from moteroom.core.errors import ConflictError, ValidationError
 from moteroom.core.ids import LotId
 from moteroom.core.weight import Weight, total
+from moteroom.ginning.plant import Shift, ShiftLog, Stoppage
 from moteroom.ginning.reconcile import reconcile
 from moteroom.ginning.run import GinRun
 from moteroom.ginning.turnout import summarise
 from moteroom.storage.lots import BaleRepository, LotRepository
 from moteroom.storage.tickets import TicketRepository
+
+
+def read_time(text: str) -> time:
+    """Read a clock time such as 07:00 off the command line."""
+    try:
+        return datetime.strptime(text.strip(), "%H:%M").time()
+    except ValueError as exc:
+        raise ValidationError("time", f"{text!r} is not a time") from exc
 
 
 def read_tickets(text: str) -> tuple[int, ...]:
@@ -158,3 +169,51 @@ def close_lot(session: Session, number: int) -> None:
             raise ConflictError("lot", str(target), "is already closed")
         lots.close(target)
     click.echo(f"lot {target} closed")
+
+
+@lot.command("shift")
+@click.argument("started")
+@click.argument("finished")
+@click.argument("bales", type=int)
+@click.option("--stop", "stops", multiple=True, help="A stoppage as reason:minutes.")
+@click.option("--on", "started_on", default=None, help="Shift date, YYYY-MM-DD.")
+@click.pass_obj
+def log_shift(
+    session: Session,
+    started: str,
+    finished: str,
+    bales: int,
+    stops: tuple[str, ...],
+    started_on: str | None,
+) -> None:
+    """Work out what a shift ran at, given its stoppages."""
+    stoppages = []
+    for text in stops:
+        reason, sep, minutes = text.partition(":")
+        if not sep or not minutes.strip().isdigit():
+            raise ValidationError("stop", f"{text!r} is not a stoppage")
+        stoppages.append(Stoppage(reason.strip(), int(minutes)))
+    made = Shift(
+        started_on=read_date(started_on, session.season.start),
+        started=read_time(started),
+        finished=read_time(finished),
+        bales=bales,
+        stoppages=tuple(stoppages),
+    )
+    log = ShiftLog()
+    log.add(made)
+    click.echo(
+        render_pairs(
+            [
+                ("shift", made.started_on.isoformat()),
+                ("elapsed", f"{made.elapsed} min"),
+                ("stopped", f"{made.stopped} min"),
+                ("running", f"{made.running} min"),
+                ("availability", f"{made.availability}%"),
+                ("bales", str(made.bales)),
+                ("rate", f"{made.bales_per_hour} an hour running"),
+                ("shift rate", f"{made.bales_per_shift_hour} an hour manned"),
+                ("worst", str(made.worst_stoppage() or "nothing stopped it")),
+            ]
+        )
+    )
