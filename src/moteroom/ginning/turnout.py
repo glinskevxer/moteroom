@@ -9,13 +9,12 @@ than off a single module.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 
-from moteroom.core.errors import ValidationError
+from moteroom.core.reading import HUNDREDTH, ratio
 from moteroom.core.weight import Weight
 from moteroom.ginning.run import GinRun
 
-HUNDREDTH = Decimal("0.01")
 STATISTICAL_BALE = 480
 LOW_TURNOUT = Decimal("30.00")
 HIGH_TURNOUT = Decimal("45.00")
@@ -23,10 +22,7 @@ HIGH_TURNOUT = Decimal("45.00")
 
 def percent(part: Weight, whole: Weight) -> Decimal:
     """A percentage to a hundredth, refusing a division nobody can do."""
-    if whole.is_zero:
-        raise ValidationError("whole", "cannot take a percentage of nothing")
-    ratio = Decimal(part.pounds) * Decimal(100) / Decimal(whole.pounds)
-    return ratio.quantize(HUNDREDTH, rounding=ROUND_HALF_UP)
+    return ratio(part.pounds, whole.pounds)
 
 
 def lint_turnout(run: GinRun) -> Decimal:

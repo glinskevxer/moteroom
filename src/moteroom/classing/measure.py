@@ -13,9 +13,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import Self
 
 from moteroom.core.errors import ValidationError
-
-TENTH = Decimal("0.1")
-HUNDREDTH = Decimal("0.01")
+from moteroom.core.reading import HUNDREDTH, TENTH, checked
 
 MIN_MIKE = Decimal("2.0")
 MAX_MIKE = Decimal("6.9")
@@ -36,19 +34,6 @@ MIN_TRASH = Decimal("0.00")
 MAX_TRASH = Decimal("9.99")
 
 
-def _checked(
-    value: Decimal | str, field: str, low: Decimal, high: Decimal, step: Decimal
-) -> Decimal:
-    reading = Decimal(value) if isinstance(value, str) else value
-    if not isinstance(reading, Decimal):
-        raise ValidationError(field, "must be a Decimal or text")
-    if reading != reading.quantize(step):
-        raise ValidationError(field, f"{reading} is finer than the instrument reports")
-    if not low <= reading <= high:
-        raise ValidationError(field, f"{reading} is outside {low} to {high}")
-    return reading
-
-
 @dataclass(frozen=True, order=True)
 class Micronaire:
     """Fineness and maturity together, which is what mike actually measures."""
@@ -57,7 +42,7 @@ class Micronaire:
 
     def __post_init__(self) -> None:
         object.__setattr__(
-            self, "reading", _checked(self.reading, "mike", MIN_MIKE, MAX_MIKE, TENTH)
+            self, "reading", checked(self.reading, "mike", MIN_MIKE, MAX_MIKE, TENTH)
         )
 
     @classmethod
@@ -116,7 +101,7 @@ class Strength:
         object.__setattr__(
             self,
             "grams_per_tex",
-            _checked(self.grams_per_tex, "strength", MIN_STRENGTH, MAX_STRENGTH, TENTH),
+            checked(self.grams_per_tex, "strength", MIN_STRENGTH, MAX_STRENGTH, TENTH),
         )
 
     def __str__(self) -> str:
@@ -133,7 +118,7 @@ class Uniformity:
         object.__setattr__(
             self,
             "percent",
-            _checked(self.percent, "uniformity", MIN_UNIFORMITY, MAX_UNIFORMITY, TENTH),
+            checked(self.percent, "uniformity", MIN_UNIFORMITY, MAX_UNIFORMITY, TENTH),
         )
 
     def __str__(self) -> str:
@@ -148,7 +133,7 @@ class Trash:
 
     def __post_init__(self) -> None:
         object.__setattr__(
-            self, "percent", _checked(self.percent, "trash", MIN_TRASH, MAX_TRASH, HUNDREDTH)
+            self, "percent", checked(self.percent, "trash", MIN_TRASH, MAX_TRASH, HUNDREDTH)
         )
 
     def __str__(self) -> str:

@@ -13,18 +13,8 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from moteroom.classing.color import CLASS_NAMES
 from moteroom.classing.record import ClassingRecord
+from moteroom.core.reading import HUNDREDTH, share
 from moteroom.reporting.report import Report
-
-HUNDREDTH = Decimal("0.01")
-
-
-def share(count: int, whole: int) -> Decimal:
-    """A count as a percentage of a whole, which is nothing when there is none."""
-    if whole <= 0:
-        return Decimal("0.00")
-    return (Decimal(count) * Decimal(100) / Decimal(whole)).quantize(
-        HUNDREDTH, rounding=ROUND_HALF_UP
-    )
 
 
 def _counted(

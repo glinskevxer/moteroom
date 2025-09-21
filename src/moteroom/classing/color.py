@@ -18,12 +18,12 @@ from decimal import Decimal
 from typing import Self
 
 from moteroom.core.errors import ValidationError
+from moteroom.core.reading import TENTH, checked
 
 MIN_RD = Decimal("40.0")
 MAX_RD = Decimal("85.0")
 MIN_PLUS_B = Decimal("4.0")
 MAX_PLUS_B = Decimal("18.0")
-TENTH = Decimal("0.1")
 
 CLASS_NAMES = {
     1: "white",
@@ -72,13 +72,7 @@ GRADE_BANDS: dict[int, tuple[tuple[int, Decimal], ...]] = {
 
 def clean_reading(value: Decimal, field: str, low: Decimal, high: Decimal) -> Decimal:
     """One instrument reading, checked against the range it can report."""
-    if not isinstance(value, Decimal):
-        raise ValidationError(field, "must be a Decimal")
-    if value != value.quantize(TENTH):
-        raise ValidationError(field, f"{value} is finer than a tenth")
-    if not low <= value <= high:
-        raise ValidationError(field, f"{value} is outside {low} to {high}")
-    return value
+    return checked(value, field, low, high, TENTH)
 
 
 @dataclass(frozen=True, order=True)

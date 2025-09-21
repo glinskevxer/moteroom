@@ -14,6 +14,7 @@ from decimal import Decimal
 
 from moteroom.core.errors import ValidationError
 from moteroom.core.ids import BaleId, LotId
+from moteroom.core.reading import TENTH, checked
 from moteroom.core.weight import Weight
 
 MIN_NET_POUNDS = 300
@@ -24,7 +25,6 @@ MIN_TARE_POUNDS = 4
 MAX_TARE_POUNDS = 40
 MIN_MOISTURE = Decimal("3.0")
 MAX_MOISTURE = Decimal("10.0")
-TENTH = Decimal("0.1")
 
 
 @dataclass(frozen=True)
@@ -54,12 +54,7 @@ class Bale:
             raise ValidationError("net", f"{net} is too light to be a bale")
         if net.pounds > MAX_NET_POUNDS:
             raise ValidationError("net", f"{net} is too heavy to be a bale")
-        if self.moisture != self.moisture.quantize(TENTH):
-            raise ValidationError("moisture", "is finer than a tenth")
-        if not MIN_MOISTURE <= self.moisture <= MAX_MOISTURE:
-            raise ValidationError(
-                "moisture", f"{self.moisture} is outside {MIN_MOISTURE}-{MAX_MOISTURE}"
-            )
+        checked(self.moisture, "moisture", MIN_MOISTURE, MAX_MOISTURE, TENTH)
 
     @property
     def net(self) -> Weight:

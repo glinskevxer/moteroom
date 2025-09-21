@@ -14,6 +14,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from moteroom.core.errors import ValidationError
 from moteroom.core.ids import ModuleId
+from moteroom.core.reading import TENTH, checked
 from moteroom.core.season import Season
 from moteroom.core.weight import Weight
 
@@ -22,19 +23,11 @@ MAX_MODULE_POUNDS = 30_000
 MIN_MOISTURE = Decimal("2.0")
 MAX_MOISTURE = Decimal("25.0")
 REFERENCE_MOISTURE = Decimal("7.5")
-TENTH = Decimal("0.1")
 
 
 def clean_moisture(value: Decimal | str) -> Decimal:
     """Read a moisture reading, which the probe reports to a tenth."""
-    reading = Decimal(value) if isinstance(value, str) else value
-    if not isinstance(reading, Decimal):
-        raise ValidationError("moisture", "must be a Decimal or text")
-    if reading != reading.quantize(TENTH):
-        raise ValidationError("moisture", f"{reading} is finer than a tenth")
-    if not MIN_MOISTURE <= reading <= MAX_MOISTURE:
-        raise ValidationError("moisture", f"{reading} is outside {MIN_MOISTURE}-{MAX_MOISTURE}")
-    return reading
+    return checked(value, "moisture", MIN_MOISTURE, MAX_MOISTURE, TENTH)
 
 
 @dataclass(frozen=True)

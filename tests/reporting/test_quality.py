@@ -7,6 +7,7 @@ from moteroom.classing.defect import Extraneous, LeafGrade
 from moteroom.classing.measure import Micronaire, Staple, Strength, Trash, Uniformity
 from moteroom.classing.record import ClassingRecord
 from moteroom.core.ids import BaleId, GinCode
+from moteroom.core.reading import share
 from moteroom.core.season import Season
 from moteroom.reporting.quality import (
     averages,
@@ -14,7 +15,6 @@ from moteroom.reporting.quality import (
     colour_distribution,
     findings_report,
     leaf_distribution,
-    share,
     staple_distribution,
 )
 

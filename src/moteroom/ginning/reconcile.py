@@ -9,13 +9,13 @@ differ by more than the plant tolerates.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 
 from moteroom.core.errors import ValidationError
+from moteroom.core.reading import ratio
 from moteroom.core.weight import Weight
 from moteroom.ginning.run import GinRun
 
-HUNDREDTH = Decimal("0.01")
 DEFAULT_TOLERANCE = Decimal("1.50")
 
 
@@ -37,10 +37,7 @@ class Reconciliation:
     @property
     def drift(self) -> Decimal:
         """The difference as a percentage of what the lot sheet claimed."""
-        if self.sheet_lint.is_zero:
-            raise ValidationError("sheet_lint", "cannot take a percentage of nothing")
-        ratio = Decimal(self.difference) * Decimal(100) / Decimal(self.sheet_lint.pounds)
-        return ratio.quantize(HUNDREDTH, rounding=ROUND_HALF_UP)
+        return ratio(self.difference, self.sheet_lint.pounds, "sheet_lint")
 
     @property
     def agrees(self) -> bool:
