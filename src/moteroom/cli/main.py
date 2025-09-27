@@ -17,6 +17,7 @@ from moteroom import __version__
 from moteroom.cli.classing import card
 from moteroom.cli.context import DEFAULT_BOOK, Session
 from moteroom.cli.ginning import lot
+from moteroom.cli.loans import loan
 from moteroom.cli.press import bale
 from moteroom.cli.producers import producer
 from moteroom.cli.receiving import ticket
@@ -87,6 +88,7 @@ main.add_command(receipt)
 main.add_command(order)
 main.add_command(settle)
 main.add_command(report)
+main.add_command(loan)
 
 
 def run() -> int:
