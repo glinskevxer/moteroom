@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import click
 
 from moteroom.cli.context import Session
@@ -13,6 +15,7 @@ from moteroom.core.weight import total
 from moteroom.storage.lots import BaleRepository
 from moteroom.storage.settings import SettingsRepository
 from moteroom.storage.warehouse import OrderRepository, ReceiptRepository
+from moteroom.warehouse.ewr import parse_acknowledgement, render_transfer, transfer_weight
 from moteroom.warehouse.receipt import Receipt
 from moteroom.warehouse.shipping import ShippingOrder, check_against, plan_loads
 
@@ -166,3 +169,56 @@ def show_order(session: Session, number: str) -> None:
             ]
         )
     )
+
+
+@receipt.command("transfer")
+@click.argument("to")
+@click.argument("numbers", nargs=-1)
+@click.option("--provider", default="EWRCO", show_default=True, help="EWR provider code.")
+@click.option("--out", "out_path", default=None, help="Write the file here instead of stdout.")
+@click.option("--on", "sent_on", default=None, help="Transfer date, YYYY-MM-DD.")
+@click.pass_obj
+def transfer(
+    session: Session,
+    to: str,
+    numbers: tuple[str, ...],
+    provider: str,
+    out_path: str | None,
+    sent_on: str | None,
+) -> None:
+    """Write an electronic transfer for receipts still in store."""
+    book = session.require_book()
+    receipts = ReceiptRepository(book.connection)
+    picked = (
+        [receipts.get(number.strip().upper()) for number in numbers]
+        if numbers
+        else receipts.outstanding()
+    )
+    text = render_transfer(picked, provider, read_date(sent_on, session.season.end), to)
+    if out_path:
+        Path(out_path).write_text(text + "\n", encoding="utf-8")
+        click.echo(f"{len(picked)} receipts, {transfer_weight(picked)}, written to {out_path}")
+        return
+    click.echo(text)
+
+
+@receipt.command("acknowledge")
+@click.argument("path", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option("--to", default=None, help="Release the accepted receipts to this holder.")
+@click.option("--on", "released_on", default=None, help="Release date, YYYY-MM-DD.")
+@click.pass_obj
+def acknowledge(session: Session, path: Path, to: str | None, released_on: str | None) -> None:
+    """Read the provider's answer and release what it accepted."""
+    book = session.require_book()
+    answer = parse_acknowledgement(path.read_text(encoding="utf-8"))
+    click.echo(f"{answer.provider} on {answer.answered_on.isoformat()}: {answer}")
+    for number, reason in answer.rejected:
+        click.echo(f"  rejected {number}: {reason}")
+    if to is None:
+        return
+    when = read_date(released_on, session.season.end)
+    with book.transaction() as conn:
+        held = ReceiptRepository(conn)
+        for number in answer.accepted:
+            held.release(number, when, to.strip().upper())
+    click.echo(f"released {len(answer.accepted)} receipts to {to.strip().upper()}")

@@ -126,3 +126,62 @@ def test_an_order_shows_its_loads(stored):
 
 def test_an_order_nobody_wrote(stored):
     assert stored("order", "show", "SO000141").exit_code != 0
+
+
+def test_a_transfer_writes_every_outstanding_receipt(stored, tmp_path):
+    issue(stored, 1, on="2025-10-20")
+    issue(stored, 2, on="2025-10-20")
+    made = stored("receipt", "transfer", "calcot", "--on", "2026-01-12")
+    assert made.exit_code == 0
+    assert made.output.splitlines()[0].startswith("EWRHDR")
+    assert "MW00000002" in made.output
+
+
+def test_a_transfer_can_name_the_receipts_and_a_file(stored, tmp_path):
+    issue(stored, 1, on="2025-10-20")
+    issue(stored, 2, on="2025-10-20")
+    out = tmp_path / "transfer.txt"
+    made = stored(
+        "receipt", "transfer", "CALCOT", "MW00000001", "--out", str(out), "--on", "2026-01-12"
+    )
+    assert "1 receipts" in made.output
+    assert "MW00000002" not in out.read_text()
+
+
+def test_a_transfer_with_nothing_in_store(stored):
+    assert stored("receipt", "transfer", "CALCOT").exit_code != 0
+
+
+def test_a_transfer_naming_a_receipt_nobody_issued(stored):
+    assert stored("receipt", "transfer", "CALCOT", "MW00000009").exit_code != 0
+
+
+def test_an_acknowledgement_releases_what_it_accepted(stored, tmp_path):
+    issue(stored, 1, on="2025-10-20")
+    issue(stored, 2, on="2025-10-20")
+    answer = tmp_path / "ack.txt"
+    answer.write_text(
+        "EWRHDREWRCO 20260112000002\nMW00000001A\nMW00000002Rholder unknown\nEWRTRL000002\n",
+        encoding="utf-8",
+    )
+    made = stored("receipt", "acknowledge", str(answer), "--to", "calcot", "--on", "2026-01-12")
+    assert "1 accepted, 1 rejected" in made.output
+    assert "holder unknown" in made.output
+    assert "MW00000001" not in stored("receipt", "list").output
+    assert "MW00000002" in stored("receipt", "list").output
+
+
+def test_an_acknowledgement_can_be_read_without_releasing(stored, tmp_path):
+    issue(stored, 1, on="2025-10-20")
+    answer = tmp_path / "ack.txt"
+    answer.write_text(
+        "EWRHDREWRCO 20260112000001\nMW00000001A\nEWRTRL000001\n", encoding="utf-8"
+    )
+    stored("receipt", "acknowledge", str(answer))
+    assert "MW00000001" in stored("receipt", "list").output
+
+
+def test_an_acknowledgement_that_will_not_read(stored, tmp_path):
+    answer = tmp_path / "ack.txt"
+    answer.write_text("nonsense\n", encoding="utf-8")
+    assert stored("receipt", "acknowledge", str(answer)).exit_code != 0
