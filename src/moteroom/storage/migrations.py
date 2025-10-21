@@ -245,6 +245,36 @@ MIGRATIONS: tuple[Migration, ...] = (
             """,
         ),
     ),
+    Migration(
+        version=8,
+        description="forward contracts and what has been delivered against them",
+        statements=(
+            """
+            CREATE TABLE contracts (
+                number          TEXT PRIMARY KEY,
+                season          INTEGER NOT NULL,
+                buyer           TEXT NOT NULL,
+                signed_on       TEXT NOT NULL,
+                bales           INTEGER NOT NULL,
+                delivery_from   TEXT NOT NULL,
+                delivery_to     TEXT NOT NULL,
+                price           TEXT,
+                basis           TEXT
+            )
+            """,
+            """
+            CREATE TABLE deliveries (
+                contract        TEXT NOT NULL REFERENCES contracts(number),
+                bale_id         TEXT NOT NULL REFERENCES bales(bale_id),
+                delivered_on    TEXT NOT NULL,
+                rate            TEXT NOT NULL,
+                PRIMARY KEY (contract, bale_id)
+            )
+            """,
+            "CREATE INDEX contracts_by_season ON contracts (season)",
+            "CREATE UNIQUE INDEX deliveries_by_bale ON deliveries (bale_id)",
+        ),
+    ),
 )
 
 LATEST = MIGRATIONS[-1].version

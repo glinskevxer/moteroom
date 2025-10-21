@@ -5,13 +5,14 @@ from __future__ import annotations
 import click
 
 from moteroom.cli.context import Session
-from moteroom.cli.output import render_pairs
+from moteroom.cli.output import render_pairs, render_table
 from moteroom.cli.receiving import read_date
 from moteroom.core.errors import ValidationError
 from moteroom.core.ids import BaleId
 from moteroom.core.money import CentsPerPound
 from moteroom.settlement.contract import Contract, delivered_price, fill_of
 from moteroom.storage.cards import CardRepository
+from moteroom.storage.contracts import ContractRepository
 from moteroom.storage.lots import BaleRepository
 
 
@@ -90,3 +91,87 @@ def fill(session: Session, number: str, bales: int, delivered: tuple[int, ...]) 
     """How much of a contract is still to go."""
     made = build_contract(number, "BUYER", bales, None, None, None, "68.50", None, session)
     click.echo(str(fill_of(made, list(delivered))))
+
+
+@contract.command("write")
+@click.argument("number")
+@click.argument("buyer")
+@click.argument("bales", type=int)
+@click.option("--price", default=None, help="Flat contract price in cents.")
+@click.option("--basis", default=None, help="Basis in cents, for a basis contract.")
+@click.option("--signed", default=None, help="Signing date, YYYY-MM-DD.")
+@click.option("--opens", default=None, help="Delivery window opens, YYYY-MM-DD.")
+@click.option("--closes", default=None, help="Delivery window closes, YYYY-MM-DD.")
+@click.pass_obj
+def write_contract(
+    session: Session,
+    number: str,
+    buyer: str,
+    bales: int,
+    price: str | None,
+    basis: str | None,
+    signed: str | None,
+    opens: str | None,
+    closes: str | None,
+) -> None:
+    """Put a contract on the book."""
+    book = session.book()
+    made = build_contract(number, buyer, bales, signed, opens, closes, price, basis, session)
+    with book.transaction() as conn:
+        ContractRepository(conn).add(made, session.season)
+    click.echo(str(made))
+
+
+@contract.command("deliver")
+@click.argument("number")
+@click.argument("bale_id")
+@click.option("--futures", default=None, help="Futures price, for a basis contract.")
+@click.option("--on", "delivered_on", default=None, help="Delivery date, YYYY-MM-DD.")
+@click.pass_obj
+def deliver(
+    session: Session, number: str, bale_id: str, futures: str | None, delivered_on: str | None
+) -> None:
+    """Deliver one classed bale against a contract."""
+    book = session.require_book()
+    tag = BaleId.parse(bale_id)
+    when = read_date(delivered_on, session.season.end)
+    with book.transaction() as conn:
+        contracts = ContractRepository(conn)
+        made = contracts.get(number.strip().upper())
+        if not made.covers(when):
+            raise ValidationError("on", f"{when} is outside the delivery window")
+        card = CardRepository(conn).get(tag)
+        against = CentsPerPound.parse(futures) if futures else None
+        rate = delivered_price(made, card, against)
+        contracts.deliver(made.number, tag, when, rate)
+        one = BaleRepository(conn).get(tag)
+    click.echo(f"{tag} delivered at {rate}, {rate.on(one.net)}")
+
+
+@contract.command("list")
+@click.pass_obj
+def list_contracts(session: Session) -> None:
+    """Every contract this season and how much of it is left."""
+    book = session.require_book()
+    contracts = ContractRepository(book.connection)
+    rows = []
+    for made in contracts.for_season(session.season):
+        filled = contracts.fill(made.number)
+        rows.append(
+            [
+                made.number,
+                made.buyer,
+                str(made.bales),
+                str(filled.delivered),
+                str(filled.remaining),
+                str(made.price) if made.price else f"basis {made.basis}",
+                made.delivery_to.isoformat(),
+            ]
+        )
+    click.echo(
+        render_table(
+            ["contract", "buyer", "bales", "delivered", "left", "price", "closes"],
+            rows,
+            right=(2, 3, 4),
+        )
+    )
