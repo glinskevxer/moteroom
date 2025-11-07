@@ -17,9 +17,11 @@ from moteroom.cli.options import on_option, read_date
 from moteroom.cli.output import render_pairs, render_table
 from moteroom.core.money import Money
 from moteroom.service.settlement import SettlementService
+from moteroom.settlement.equity import allocate_margin
 from moteroom.settlement.statement import Advance, Statement
 from moteroom.storage.rates import RatesRepository, default_terms
 from moteroom.storage.settlement import AdvanceRepository, StatementRepository
+from moteroom.storage.tickets import TicketRepository
 
 
 def statement_lines(made: Statement) -> list[tuple[str, str]]:
@@ -151,3 +153,33 @@ def list_settlements(session: Session) -> None:
             right=(1, 2, 3, 4, 5, 6),
         )
     )
+
+
+@settle.command("equity")
+@click.argument("margin")
+@click.option("--cash", type=int, default=1, show_default=True, help="Shares paid in cash.")
+@click.option("--retain", type=int, default=4, show_default=True, help="Shares kept as equity.")
+@click.pass_obj
+def equity(session: Session, margin: str, cash: int, retain: int) -> None:
+    """Allocate the season's margin back to the members on ginned volume."""
+    book = session.require_book()
+    held = TicketRepository(book.connection).book(session.season)
+    volume = {code: held.net_for_producer(code) for code in held.producers()}
+    made = allocate_margin(session.season, Money.parse(margin), volume, cash, retain)
+    rows = [
+        [
+            share.producer,
+            str(share.basis.pounds),
+            str(share.allocated),
+            str(share.cash),
+            str(share.retained),
+        ]
+        for share in made.shares
+    ]
+    click.echo(
+        render_table(
+            ["member", "ginned", "allocated", "cash", "equity"], rows, right=(1, 2, 3, 4)
+        )
+    )
+    click.echo()
+    click.echo(f"{made.members} members, {made.cash} in cash and {made.retained} retained")

@@ -98,3 +98,30 @@ def test_the_list_shows_what_has_been_settled(ginned):
 
 def test_an_empty_list_says_nothing(ginned):
     assert "(nothing)" in ginned("settle", "list").output
+
+
+def test_the_margin_allocates_on_ginned_volume(ginned):
+    made = ginned("settle", "equity", "30000.00")
+    assert made.exit_code == 0
+    assert "BLYTHE" in made.output
+    assert "MERRITT" in made.output
+    assert "2 members" in made.output
+
+
+def test_the_cash_and_equity_shares_can_be_set(ginned):
+    all_cash = ginned("settle", "equity", "30000.00", "--cash", "1", "--retain", "0")
+    assert "$30,000.00 in cash" in all_cash.output
+    assert "$0.00 retained" in all_cash.output
+
+
+def test_a_margin_that_will_not_read(ginned):
+    assert ginned("settle", "equity", "lots").exit_code != 0
+
+
+def test_a_loss_is_not_allocated(ginned):
+    assert ginned("settle", "equity", "-100.00").exit_code != 0
+
+
+def test_allocating_with_nothing_ginned(run: Run) -> None:
+    run("producer", "add", "BLYTHE", "Blythe Farms")
+    assert run("settle", "equity", "30000.00").exit_code != 0
