@@ -6,7 +6,7 @@ from click.testing import Result
 
 from moteroom.cli.options import read_date
 from moteroom.core.errors import ValidationError
-from tests.cli.conftest import Run
+from tests.conftest import Run
 
 
 @pytest.fixture()

@@ -1,4 +1,4 @@
-from tests.cli.conftest import Run
+from tests.conftest import Run
 
 
 def test_a_setting_writes_and_reads_back(run: Run) -> None:

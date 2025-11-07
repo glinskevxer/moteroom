@@ -4,7 +4,7 @@ import pytest
 
 from moteroom.core.ids import BaleId, GinCode
 from moteroom.core.season import Season
-from tests.cli.conftest import Run
+from tests.conftest import Run
 
 GIN = GinCode("41207")
 SEASON = Season(2025)

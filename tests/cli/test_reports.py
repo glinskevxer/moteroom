@@ -1,6 +1,6 @@
 import pytest
 
-from tests.cli.conftest import Run
+from tests.conftest import Run
 
 
 @pytest.fixture()

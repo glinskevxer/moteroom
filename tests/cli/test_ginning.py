@@ -2,7 +2,7 @@ import pytest
 
 from moteroom.cli.ginning import read_tickets
 from moteroom.core.errors import ValidationError
-from tests.cli.conftest import Run
+from tests.conftest import Run
 
 
 @pytest.fixture()
