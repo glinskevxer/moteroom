@@ -4,7 +4,7 @@ from typing import Any
 import pytest
 from click.testing import Result
 
-from moteroom.cli.receiving import read_date
+from moteroom.cli.options import read_date
 from moteroom.core.errors import ValidationError
 from tests.cli.conftest import Run
 

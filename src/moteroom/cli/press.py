@@ -10,8 +10,8 @@ from __future__ import annotations
 import click
 
 from moteroom.cli.context import Session
+from moteroom.cli.options import on_option, read_date
 from moteroom.cli.output import render_pairs, render_table
-from moteroom.cli.receiving import read_date
 from moteroom.core.errors import ConflictError
 from moteroom.core.ids import LotId
 from moteroom.core.weight import Weight, total
@@ -30,7 +30,7 @@ def bale() -> None:
 @click.argument("gross")
 @click.option("--tare", default="23", show_default=True, help="Bagging and ties.")
 @click.option("--moisture", default="6.5", show_default=True, help="Bale moisture.")
-@click.option("--on", "pressed_on", default=None, help="Press date, YYYY-MM-DD.")
+@on_option("Press date")
 @click.pass_obj
 def press_bale(
     session: Session,
@@ -38,7 +38,7 @@ def press_bale(
     gross: str,
     tare: str,
     moisture: str,
-    pressed_on: str | None,
+    on_text: str | None,
 ) -> None:
     """Press one bale off a lot."""
     book = session.require_book()
@@ -53,7 +53,7 @@ def press_bale(
         counter = bales.press(session.season, gin)
         pressed = counter.press(
             target,
-            read_date(pressed_on, session.season.start),
+            read_date(on_text, session.season.start),
             Weight.parse(gross),
             Weight.parse(tare),
             clean_moisture(moisture),

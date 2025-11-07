@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date
 
 import click
 
 from moteroom.cli.context import Session
+from moteroom.cli.options import as_of_option, on_option, read_date
 from moteroom.cli.output import render_pairs, render_table
 from moteroom.core.errors import ValidationError
 from moteroom.core.ids import ModuleId
@@ -15,16 +16,6 @@ from moteroom.receiving.ticket import ModuleTicket, clean_moisture
 from moteroom.receiving.yard import ModuleYard
 from moteroom.storage.lots import LotRepository
 from moteroom.storage.tickets import TicketRepository
-
-
-def read_date(text: str | None, fallback: date) -> date:
-    """Read a date off the command line, defaulting to the day given."""
-    if not text:
-        return fallback
-    try:
-        return datetime.strptime(text, "%Y-%m-%d").date()
-    except ValueError as exc:
-        raise ValidationError("date", f"{text!r} is not a date") from exc
 
 
 @click.group()
@@ -39,7 +30,7 @@ def ticket() -> None:
 @click.argument("gross")
 @click.argument("tare")
 @click.option("--moisture", default="7.5", show_default=True, help="Probe reading.")
-@click.option("--on", "weighed_on", default=None, help="Weigh date, YYYY-MM-DD.")
+@on_option("Weigh date")
 @click.pass_obj
 def weigh(
     session: Session,
@@ -49,11 +40,11 @@ def weigh(
     gross: str,
     tare: str,
     moisture: str,
-    weighed_on: str | None,
+    on_text: str | None,
 ) -> None:
     """Write a scale ticket for one module."""
     book = session.book()
-    day = read_date(weighed_on, session.season.start)
+    day = read_date(on_text, session.season.start)
     if not session.season.contains(day):
         raise ValidationError("on", f"{day} is outside {session.season}")
     with book.transaction() as conn:
@@ -157,7 +148,7 @@ def show_ticket(session: Session, number: int) -> None:
 
 
 @ticket.command("yard")
-@click.option("--as-of", "as_of", default=None, help="Yard date, YYYY-MM-DD.")
+@as_of_option("Yard date")
 @click.pass_obj
 def yard(session: Session, as_of: str | None) -> None:
     """What is still in the yard, worst first."""

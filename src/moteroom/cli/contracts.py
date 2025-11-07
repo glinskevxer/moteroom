@@ -5,8 +5,8 @@ from __future__ import annotations
 import click
 
 from moteroom.cli.context import Session
+from moteroom.cli.options import on_option, read_date
 from moteroom.cli.output import render_pairs, render_table
-from moteroom.cli.receiving import read_date
 from moteroom.core.errors import ValidationError
 from moteroom.core.ids import BaleId
 from moteroom.core.money import CentsPerPound
@@ -126,15 +126,15 @@ def write_contract(
 @click.argument("number")
 @click.argument("bale_id")
 @click.option("--futures", default=None, help="Futures price, for a basis contract.")
-@click.option("--on", "delivered_on", default=None, help="Delivery date, YYYY-MM-DD.")
+@on_option("Delivery date")
 @click.pass_obj
 def deliver(
-    session: Session, number: str, bale_id: str, futures: str | None, delivered_on: str | None
+    session: Session, number: str, bale_id: str, futures: str | None, on_text: str | None
 ) -> None:
     """Deliver one classed bale against a contract."""
     book = session.require_book()
     tag = BaleId.parse(bale_id)
-    when = read_date(delivered_on, session.season.end)
+    when = read_date(on_text, session.season.end)
     with book.transaction() as conn:
         contracts = ContractRepository(conn)
         made = contracts.get(number.strip().upper())

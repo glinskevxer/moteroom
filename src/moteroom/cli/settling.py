@@ -13,8 +13,8 @@ from datetime import date
 import click
 
 from moteroom.cli.context import Session
+from moteroom.cli.options import on_option, read_date
 from moteroom.cli.output import render_pairs, render_table
-from moteroom.cli.receiving import read_date
 from moteroom.core.money import Money
 from moteroom.service.settlement import SettlementService
 from moteroom.settlement.statement import Advance, Statement
@@ -58,10 +58,10 @@ def post_rates(session: Session, show: bool) -> None:
 @click.argument("producer")
 @click.argument("reference")
 @click.argument("amount")
-@click.option("--on", "paid_on", default=None, help="Payment date, YYYY-MM-DD.")
+@on_option("Payment date")
 @click.pass_obj
 def advance(
-    session: Session, producer: str, reference: str, amount: str, paid_on: str | None
+    session: Session, producer: str, reference: str, amount: str, on_text: str | None
 ) -> None:
     """Record money paid out before the settlement."""
     book = session.require_book()
@@ -70,7 +70,7 @@ def advance(
             session.season,
             producer.strip().upper(),
             Advance(reference.strip().upper(), Money.parse(amount)),
-            read_date(paid_on, session.season.start),
+            read_date(on_text, session.season.start),
         )
     click.echo(f"advance {reference.strip().upper()} of {Money.parse(amount)} recorded")
 
@@ -112,9 +112,9 @@ def preview(session: Session, producer: str) -> None:
 
 @settle.command("run")
 @click.argument("producer")
-@click.option("--on", "settled_on", default=None, help="Settlement date, YYYY-MM-DD.")
+@on_option("Settlement date")
 @click.pass_obj
-def run_settlement(session: Session, producer: str, settled_on: str | None) -> None:
+def run_settlement(session: Session, producer: str, on_text: str | None) -> None:
     """Settle a producer and write it down."""
     book = session.require_book()
     rates = RatesRepository(book.connection)
@@ -122,7 +122,7 @@ def run_settlement(session: Session, producer: str, settled_on: str | None) -> N
     code = producer.strip().upper()
     with book.transaction() as conn:
         made = SettlementService(book, terms).build(session.season, code)
-        StatementRepository(conn).save(made, read_date(settled_on, session.season.end))
+        StatementRepository(conn).save(made, read_date(on_text, session.season.end))
     verdict = "due" if made.is_payable else "owing"
     click.echo(f"{code} settled, {made.net} {verdict}")
 
