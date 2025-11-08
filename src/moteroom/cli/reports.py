@@ -24,6 +24,7 @@ from moteroom.receiving.yard import ModuleYard
 from moteroom.reporting import daily, exceptions, position, quality
 from moteroom.reporting.report import Report
 from moteroom.reporting.settlement import settlement_summary, statement_report, unsettled
+from moteroom.service import inventory
 from moteroom.service.settlement import SettlementService
 from moteroom.storage.cards import CardRepository
 from moteroom.storage.contracts import ContractRepository
@@ -225,3 +226,28 @@ def exception_report(session: Session, as_of: str | None, csv_out: bool) -> None
         ),
     ]
     emit(exceptions.build(findings, when), csv_out)
+
+
+@report.command("inventory")
+@csv_option
+@click.pass_obj
+def inventory_report(session: Session, csv_out: bool) -> None:
+    """Where every bale pressed this season actually is."""
+    book = session.require_book()
+    taken = inventory.take(book, session.season)
+    rows = tuple(
+        (str(one.bale_id), one.where, one.detail, str(one.net.pounds))
+        for one in taken.placements
+    )
+    notes = [str(taken), f"{taken.net} pressed"]
+    notes.extend(f"{key}: {reason}" for key, reason in taken.orphans)
+    emit(
+        Report(
+            title=f"inventory for {session.season}",
+            headers=("bale", "where", "detail", "net"),
+            rows=rows,
+            right=(3,),
+            notes=tuple(notes),
+        ),
+        csv_out,
+    )

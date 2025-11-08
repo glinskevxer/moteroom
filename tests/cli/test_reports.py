@@ -166,3 +166,26 @@ def test_an_unsettled_producer_is_noted_until_they_are_settled(worked):
 def test_the_exception_report_can_come_out_as_csv(worked):
     made = worked("report", "exceptions", "--as-of", "2025-12-01", "--csv")
     assert made.output.splitlines()[0] == "level,what,detail"
+
+
+def test_the_inventory_places_every_bale(worked):
+    made = worked("report", "inventory")
+    assert made.exit_code == 0
+    assert "2 at the gin" in made.output
+    assert "1,040 lb pressed" in made.output
+
+
+def test_the_inventory_moves_a_bale_into_store(worked):
+    worked(
+        "receipt",
+        "issue",
+        "541207000018",
+        "MW00000001",
+        "--holder",
+        "BLYTHE",
+        "--on",
+        "2025-10-20",
+    )
+    made = worked("report", "inventory")
+    assert "in store" in made.output
+    assert "1 at the gin, 1 in store" in made.output
