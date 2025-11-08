@@ -118,3 +118,51 @@ def test_a_statement_prints_once_it_is_settled(worked):
 
 def test_a_report_on_a_book_that_does_not_exist(run: Run) -> None:
     assert run("report", "daily").exit_code != 0
+
+
+def test_an_empty_book_has_nothing_to_report(run):
+    run("init")
+    made = run("report", "exceptions", "--as-of", "2025-10-17")
+    assert made.exit_code == 0
+    assert "nothing needs attention" in made.output
+
+
+def test_a_wet_module_held_too_long_shows_up(run):
+    run("setting", "set", "gin_code", "41207")
+    run("producer", "add", "BLYTHE", "Blythe Farms")
+    run(
+        "ticket",
+        "weigh",
+        "HW-004181",
+        "BLYTHE",
+        "3312",
+        "38400",
+        "17200",
+        "--moisture",
+        "12.4",
+        "--on",
+        "2025-10-14",
+    )
+    made = run("report", "exceptions", "--as-of", "2025-10-30")
+    assert "urgent" in made.output
+    assert "HW-004181" in made.output
+
+
+def test_an_unclassed_bale_shows_up_after_three_weeks(worked):
+    made = worked("report", "exceptions", "--as-of", "2025-12-01")
+    assert "not classed" in made.output
+    assert "findings" in made.output
+
+
+def test_an_unsettled_producer_is_noted_until_they_are_settled(worked):
+    made = worked("report", "exceptions", "--as-of", "2025-10-17")
+    assert "not settled, 21,200 lb of lint" in made.output
+    worked("settle", "rates")
+    worked("settle", "run", "BLYTHE", "--on", "2026-02-03")
+    after = worked("report", "exceptions", "--as-of", "2025-10-17")
+    assert "not settled" not in after.output
+
+
+def test_the_exception_report_can_come_out_as_csv(worked):
+    made = worked("report", "exceptions", "--as-of", "2025-12-01", "--csv")
+    assert made.output.splitlines()[0] == "level,what,detail"

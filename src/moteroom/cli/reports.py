@@ -14,18 +14,23 @@ from typing import Any
 import click
 
 from moteroom.cli.context import Session
-from moteroom.cli.options import read_date
+from moteroom.cli.options import as_of_option, csv_option, read_date
 from moteroom.cli.output import render_report
 from moteroom.core.errors import ValidationError
 from moteroom.core.money import Money
-from moteroom.reporting import daily, position, quality
+from moteroom.core.weight import total
+from moteroom.ginning.reconcile import reconcile
+from moteroom.receiving.yard import ModuleYard
+from moteroom.reporting import daily, exceptions, position, quality
 from moteroom.reporting.report import Report
 from moteroom.reporting.settlement import settlement_summary, statement_report, unsettled
 from moteroom.service.settlement import SettlementService
 from moteroom.storage.cards import CardRepository
+from moteroom.storage.contracts import ContractRepository
 from moteroom.storage.lots import BaleRepository, LotRepository
 from moteroom.storage.rates import RatesRepository, default_terms
 from moteroom.storage.settlement import StatementRepository
+from moteroom.storage.tickets import TicketRepository
 from moteroom.storage.warehouse import ReceiptRepository
 from moteroom.warehouse.storage import Tariff
 
@@ -165,3 +170,58 @@ def one_statement(session: Session, producer: str, csv_out: bool) -> None:
             emit(statement_report(statement), csv_out)
             return
     raise ValidationError("producer", f"{code} has not been settled yet")
+
+
+@report.command("exceptions")
+@as_of_option("Exception date")
+@csv_option
+@click.pass_obj
+def exception_report(session: Session, as_of: str | None, csv_out: bool) -> None:
+    """Everything that needs somebody to do something about it."""
+    book = session.require_book()
+    when = read_date(as_of, date.today())
+    tickets = TicketRepository(book.connection)
+    lots = LotRepository(book.connection)
+    bales = BaleRepository(book.connection)
+    cards = CardRepository(book.connection)
+    receipts = ReceiptRepository(book.connection)
+    contracts = ContractRepository(book.connection)
+    statements = StatementRepository(book.connection)
+
+    held = tickets.book(session.season)
+    ginned = lots.assigned_tickets(session.season)
+    yard = ModuleYard()
+    for one in held.live():
+        yard.receive(one)
+        if one.number in ginned:
+            yard.gin(one.number)
+
+    waiting = [
+        (bale_id, (when - bales.get(bale_id).pressed_on).days)
+        for bale_id in cards.unclassed(session.season)
+    ]
+    checks = []
+    for run in lots.for_season(session.season):
+        pressed = bales.for_lot(run.lot)
+        if pressed:
+            checks.append(reconcile(run, total([one.net for one in pressed]), len(pressed)))
+    settled = {one.producer for one in statements.for_season(session.season)}
+    findings = [
+        *exceptions.from_yard(yard.running_order(when)),
+        *exceptions.from_unclassed(waiting),
+        *exceptions.from_reconciliations(checks),
+        *exceptions.from_storage(receipts.outstanding(), when),
+        *exceptions.from_contracts(
+            [
+                (made, contracts.fill(made.number))
+                for made in contracts.for_season(session.season)
+            ],
+            when,
+        ),
+        *exceptions.from_cards(cards.for_season(session.season)),
+        *exceptions.from_unsettled(
+            [code for code in held.producers() if code not in settled],
+            {code: held.net_for_producer(code) for code in held.producers()},
+        ),
+    ]
+    emit(exceptions.build(findings, when), csv_out)
