@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal
 
 import click
 
@@ -12,6 +13,7 @@ from moteroom.cli.output import render_pairs, render_table
 from moteroom.core.errors import ValidationError
 from moteroom.core.ids import ModuleId
 from moteroom.core.weight import Weight
+from moteroom.receiving.scale import Certificate, ScaleBook
 from moteroom.receiving.ticket import ModuleTicket, clean_moisture
 from moteroom.receiving.yard import ModuleYard
 from moteroom.storage.lots import LotRepository
@@ -185,3 +187,40 @@ def yard(session: Session, as_of: str | None) -> None:
     if urgent:
         click.echo()
         click.echo(f"{len(urgent)} modules are past their hold")
+
+
+@ticket.command("scale")
+@click.argument("scale")
+@click.argument("expires")
+@click.option("--tester", default="STATE WEIGHTS", show_default=True, help="Who tested it.")
+@click.option("--error", default="0.0", show_default=True, help="Measured error in percent.")
+@as_of_option("Test date")
+@click.pass_obj
+def certify(
+    session: Session, scale: str, expires: str, tester: str, error: str, as_of: str | None
+) -> None:
+    """Check a scale certificate and what it does to a weight."""
+    tested = read_date(as_of, session.season.start)
+    held = Certificate(
+        scale=scale.strip().upper(),
+        tested_on=tested,
+        expires_on=read_date(expires, session.season.end),
+        tester=tester.strip().upper(),
+        error=Decimal(error),
+    )
+    book = ScaleBook()
+    book.certify(held)
+    click.echo(
+        render_pairs(
+            [
+                ("scale", held.scale),
+                ("tested", held.tested_on.isoformat()),
+                ("expires", held.expires_on.isoformat()),
+                ("tester", held.tester),
+                ("error", f"{held.error}%"),
+                ("days left", str(held.days_left(tested))),
+                ("expiring", "yes" if held.expiring(tested) else "no"),
+                ("21,200 lb reads", str(book.correction(held.scale, tested, Weight(21_200)))),
+            ]
+        )
+    )

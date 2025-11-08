@@ -165,3 +165,23 @@ def test_the_yard_warns_about_a_module_held_too_long(seeded):
 
 def test_an_empty_yard_says_nothing(seeded):
     assert "(nothing)" in seeded("ticket", "yard", "--as-of", "2025-10-15").output
+
+
+def test_a_scale_certificate_reports_its_error(seeded):
+    made = seeded(
+        "ticket", "scale", "tb01", "2026-07-31", "--error", "1.0", "--as-of", "2025-08-01"
+    )
+    assert made.exit_code == 0
+    assert "20,988 lb" in made.output
+    assert "expiring         no" in made.output
+
+
+def test_a_certificate_that_runs_out_soon_says_so(seeded):
+    made = seeded("ticket", "scale", "TB01", "2025-08-20", "--as-of", "2025-08-01")
+    assert "expiring         yes" in made.output
+
+
+def test_a_certificate_that_runs_backwards_is_refused(seeded):
+    assert (
+        seeded("ticket", "scale", "TB01", "2025-07-01", "--as-of", "2025-08-01").exit_code != 0
+    )
