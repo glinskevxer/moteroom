@@ -38,6 +38,7 @@ EXPECTED_TABLES = {
     "season_rates",
     "contracts",
     "deliveries",
+    "audit",
 }
 
 

@@ -65,6 +65,7 @@ def weigh(
         )
         held.add(written)
         tickets.add(written)
+        session.record("weigh", str(written.module), f"ticket {number} {written.net}")
     click.echo(f"ticket {number} {written.module} {written.net}")
 
 
@@ -92,6 +93,9 @@ def correct(session: Session, number: int, gross: str, tare: str) -> None:
         )
         tickets.book(session.season).add(replacement)
         tickets.add(replacement)
+        session.record(
+            "correct", str(wrong.module), f"ticket {replacement.number} voids {number}"
+        )
     click.echo(f"ticket {replacement.number} voids {number}")
 
 

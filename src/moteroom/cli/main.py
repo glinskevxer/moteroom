@@ -25,6 +25,7 @@ from moteroom.cli.receiving import ticket
 from moteroom.cli.reports import report
 from moteroom.cli.settings import setting
 from moteroom.cli.settling import settle
+from moteroom.cli.trail import audit
 from moteroom.cli.warehousing import order, receipt
 from moteroom.core.errors import MoteroomError
 from moteroom.storage.migrations import LATEST
@@ -91,6 +92,7 @@ main.add_command(settle)
 main.add_command(report)
 main.add_command(loan)
 main.add_command(contract)
+main.add_command(audit)
 
 
 def run() -> int:

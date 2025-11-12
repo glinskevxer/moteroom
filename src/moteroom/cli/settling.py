@@ -125,6 +125,7 @@ def run_settlement(session: Session, producer: str, on_text: str | None) -> None
     with book.transaction() as conn:
         made = SettlementService(book, terms).build(session.season, code)
         StatementRepository(conn).save(made, read_date(on_text, session.season.end))
+        session.record("settle", code, f"{made.bales} bales, net {made.net}")
     verdict = "due" if made.is_payable else "owing"
     click.echo(f"{code} settled, {made.net} {verdict}")
 

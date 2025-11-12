@@ -59,6 +59,7 @@ def press_bale(
             clean_moisture(moisture),
         )
         bales.add(pressed)
+        session.record("press", str(pressed.bale_id), f"lot {target}, {pressed.net}")
     click.echo(f"bale {pressed.bale_id.grouped()} {pressed.net}")
 
 

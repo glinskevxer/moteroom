@@ -275,6 +275,24 @@ MIGRATIONS: tuple[Migration, ...] = (
             "CREATE UNIQUE INDEX deliveries_by_bale ON deliveries (bale_id)",
         ),
     ),
+    Migration(
+        version=9,
+        description="an audit trail of everything that wrote to the book",
+        statements=(
+            """
+            CREATE TABLE audit (
+                id          INTEGER PRIMARY KEY,
+                at          TEXT NOT NULL,
+                season      INTEGER NOT NULL,
+                action      TEXT NOT NULL,
+                subject     TEXT NOT NULL,
+                detail      TEXT NOT NULL
+            )
+            """,
+            "CREATE INDEX audit_by_subject ON audit (subject, at)",
+            "CREATE INDEX audit_by_season ON audit (season, at)",
+        ),
+    ),
 )
 
 LATEST = MIGRATIONS[-1].version

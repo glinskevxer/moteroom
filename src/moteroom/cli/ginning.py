@@ -82,6 +82,7 @@ def gin(
             motes=Weight.parse(motes),
         )
         lots.add(run)
+        session.record("gin", str(run.lot), f"{run.module_count} modules, {run.lint} of lint")
     click.echo(f"lot {run.lot} ginned {run.seed_cotton} into {run.lint} of lint")
 
 
@@ -158,6 +159,7 @@ def close_lot(session: Session, number: int) -> None:
         if lots.is_closed(target):
             raise ConflictError("lot", str(target), "is already closed")
         lots.close(target)
+        session.record("close", str(target), "lot closed")
     click.echo(f"lot {target} closed")
 
 

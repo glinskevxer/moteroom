@@ -9,11 +9,12 @@ started in.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 from moteroom.core.errors import ValidationError
 from moteroom.core.season import Season
+from moteroom.storage.audit import AuditRepository
 from moteroom.storage.book import Book
 
 DEFAULT_BOOK = "moteroom.sqlite3"
@@ -46,6 +47,12 @@ class Session:
         if not self.exists():
             raise ValidationError("book", f"{self.book_path} does not exist yet")
         return self.book()
+
+    def record(self, action: str, subject: str, detail: str = "") -> None:
+        """Write what a command just did to the trail, inside its transaction."""
+        AuditRepository(self.book().connection).record(
+            self.season, action, subject, detail, datetime.now()
+        )
 
     def close(self) -> None:
         if self._book is not None:
