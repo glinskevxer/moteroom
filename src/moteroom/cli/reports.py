@@ -26,13 +26,7 @@ from moteroom.reporting.report import Report
 from moteroom.reporting.settlement import settlement_summary, statement_report, unsettled
 from moteroom.service import inventory
 from moteroom.service.settlement import SettlementService
-from moteroom.storage.cards import CardRepository
-from moteroom.storage.contracts import ContractRepository
-from moteroom.storage.lots import BaleRepository, LotRepository
-from moteroom.storage.rates import RatesRepository, default_terms
-from moteroom.storage.settlement import StatementRepository
-from moteroom.storage.tickets import TicketRepository
-from moteroom.storage.warehouse import ReceiptRepository
+from moteroom.storage.rates import default_terms
 from moteroom.warehouse.storage import Tariff
 
 QUALITY_KINDS: dict[str, Callable[[Any], Report]] = {
@@ -75,10 +69,10 @@ def report() -> None:
 @click.pass_obj
 def daily_report(session: Session, day: str | None, csv_out: bool) -> None:
     """What ran on one day."""
-    book = session.require_book()
+    repos = session.open_repos()
     when = read_date(day, session.season.start)
-    runs = LotRepository(book.connection).for_season(session.season)
-    bales = BaleRepository(book.connection).for_season(session.season)
+    runs = repos.lots.for_season(session.season)
+    bales = repos.bales.for_season(session.season)
     emit(daily.daily_sheet(when, runs, bales), csv_out)
 
 
@@ -94,8 +88,7 @@ def daily_report(session: Session, day: str | None, csv_out: bool) -> None:
 @click.pass_obj
 def quality_report(session: Session, kind: str, csv_out: bool) -> None:
     """How the season classed."""
-    book = session.require_book()
-    cards = CardRepository(book.connection).for_season(session.season)
+    cards = session.open_repos().cards.for_season(session.season)
     emit(QUALITY_KINDS[kind](cards), csv_out)
 
 
@@ -112,10 +105,8 @@ def quality_report(session: Session, kind: str, csv_out: bool) -> None:
 @click.pass_obj
 def position_report(session: Session, grouping: str, as_of: str | None, csv_out: bool) -> None:
     """Where the bales are."""
-    book = session.require_book()
     when = read_date(as_of, date.today())
-    receipts = ReceiptRepository(book.connection)
-    held = receipts.outstanding()
+    held = session.open_repos().receipts.outstanding()
     made = (
         position.by_house(held, when) if grouping == "house" else position.by_holder(held, when)
     )
@@ -128,9 +119,8 @@ def position_report(session: Session, grouping: str, as_of: str | None, csv_out:
 @click.pass_obj
 def storage_report(session: Session, as_of: str | None, csv_out: bool) -> None:
     """What the warehouse will bill."""
-    book = session.require_book()
     when = read_date(as_of, date.today())
-    held = ReceiptRepository(book.connection).outstanding()
+    held = session.open_repos().receipts.outstanding()
     emit(position.storage_owed(held, DEFAULT_TARIFF, when), csv_out)
 
 
@@ -139,8 +129,7 @@ def storage_report(session: Session, as_of: str | None, csv_out: bool) -> None:
 @click.pass_obj
 def settlement_report(session: Session, csv_out: bool) -> None:
     """Every settlement written this season."""
-    book = session.require_book()
-    written = StatementRepository(book.connection).for_season(session.season)
+    written = session.open_repos().statements.for_season(session.season)
     emit(settlement_summary(written), csv_out)
 
 
@@ -150,10 +139,14 @@ def settlement_report(session: Session, csv_out: bool) -> None:
 def outstanding_report(session: Session, csv_out: bool) -> None:
     """Producers with cotton in and no settlement written."""
     book = session.require_book()
-    rates = RatesRepository(book.connection)
-    terms = rates.get(session.season) if rates.posted(session.season) else default_terms()
+    repos = session.open_repos()
+    terms = (
+        repos.rates.get(session.season)
+        if repos.rates.posted(session.season)
+        else default_terms()
+    )
     service = SettlementService(book, terms)
-    written = StatementRepository(book.connection).for_season(session.season)
+    written = repos.statements.for_season(session.season)
     emit(unsettled(service.settled_producers(session.season), written), csv_out)
 
 
@@ -163,9 +156,8 @@ def outstanding_report(session: Session, csv_out: bool) -> None:
 @click.pass_obj
 def one_statement(session: Session, producer: str, csv_out: bool) -> None:
     """One producer's page, off the settlement already written."""
-    book = session.require_book()
     code = producer.strip().upper()
-    written = StatementRepository(book.connection).for_season(session.season)
+    written = session.open_repos().statements.for_season(session.season)
     for statement in written:
         if statement.producer == code:
             emit(statement_report(statement), csv_out)
@@ -179,17 +171,12 @@ def one_statement(session: Session, producer: str, csv_out: bool) -> None:
 @click.pass_obj
 def exception_report(session: Session, as_of: str | None, csv_out: bool) -> None:
     """Everything that needs somebody to do something about it."""
-    book = session.require_book()
     when = read_date(as_of, date.today())
-    tickets = TicketRepository(book.connection)
-    lots = LotRepository(book.connection)
-    bales = BaleRepository(book.connection)
-    cards = CardRepository(book.connection)
-    receipts = ReceiptRepository(book.connection)
-    contracts = ContractRepository(book.connection)
-    statements = StatementRepository(book.connection)
+    repos = session.open_repos()
+    lots, bales, cards = repos.lots, repos.bales, repos.cards
+    receipts, contracts, statements = repos.receipts, repos.contracts, repos.statements
 
-    held = tickets.book(session.season)
+    held = repos.tickets.book(session.season)
     ginned = lots.assigned_tickets(session.season)
     yard = ModuleYard()
     for one in held.live():

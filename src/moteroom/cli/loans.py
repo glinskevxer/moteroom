@@ -14,20 +14,15 @@ from moteroom.core.money import CentsPerPound
 from moteroom.loan import pool
 from moteroom.loan.redemption import Redemption
 from moteroom.loan.value import rate_for
-from moteroom.storage.cards import CardRepository
-from moteroom.storage.lots import BaleRepository
-from moteroom.storage.rates import RatesRepository, default_terms
-from moteroom.storage.settings import SettingsRepository
+from moteroom.storage.rates import default_terms
 
 
 def base_rate(session: Session) -> CentsPerPound:
     """The base loan rate, off the season's posted rates or the plant setting."""
-    book = session.require_book()
-    rates = RatesRepository(book.connection)
-    if rates.posted(session.season):
-        return rates.get(session.season).base_rate
-    settings = SettingsRepository(book.connection)
-    posted = settings.get_or("base_loan_rate", "")
+    repos = session.open_repos()
+    if repos.rates.posted(session.season):
+        return repos.rates.get(session.season).base_rate
+    posted = repos.settings.get_or("base_loan_rate", "")
     return CentsPerPound.parse(posted) if posted else default_terms().base_rate
 
 
@@ -49,10 +44,10 @@ def loan() -> None:
 @click.pass_obj
 def value(session: Session, bale_id: str) -> None:
     """What one classed bale loans for, line by line."""
-    book = session.require_book()
+    repos = session.open_repos()
     tag = BaleId.parse(bale_id)
-    one = BaleRepository(book.connection).get(tag)
-    card = CardRepository(book.connection).get(tag)
+    one = repos.bales.get(tag)
+    card = repos.cards.get(tag)
     breakdown = rate_for(card, base_rate(session))
     rows = [(name, f"{amount}") for name, amount in breakdown.lines()]
     click.echo(render_table(["line", "cents"], rows, right=(1,)))
@@ -64,9 +59,8 @@ def value(session: Session, bale_id: str) -> None:
 @click.pass_obj
 def pool_report(session: Session) -> None:
     """The whole season priced at loan."""
-    book = session.require_book()
-    bales = BaleRepository(book.connection)
-    cards = CardRepository(book.connection)
+    repos = session.open_repos()
+    bales, cards = repos.bales, repos.cards
     pairs = [
         (one, cards.get(one.bale_id))
         for one in bales.for_season(session.season)
@@ -97,10 +91,10 @@ def pool_report(session: Session) -> None:
 @click.pass_obj
 def redeem(session: Session, bale_id: str, price: str, days: int, interest: str) -> None:
     """What it costs to take a bale back out of loan."""
-    book = session.require_book()
+    repos = session.open_repos()
     tag = BaleId.parse(bale_id)
-    one = BaleRepository(book.connection).get(tag)
-    card = CardRepository(book.connection).get(tag)
+    one = repos.bales.get(tag)
+    card = repos.cards.get(tag)
     breakdown = rate_for(card, base_rate(session))
     made = Redemption(
         bale_id=str(tag),

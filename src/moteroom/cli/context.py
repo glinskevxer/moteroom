@@ -14,8 +14,8 @@ from pathlib import Path
 
 from moteroom.core.errors import ValidationError
 from moteroom.core.season import Season
-from moteroom.storage.audit import AuditRepository
 from moteroom.storage.book import Book
+from moteroom.storage.registry import Repositories
 
 DEFAULT_BOOK = "moteroom.sqlite3"
 
@@ -48,11 +48,17 @@ class Session:
             raise ValidationError("book", f"{self.book_path} does not exist yet")
         return self.book()
 
+    def repos(self) -> Repositories:
+        """Every repository over this session's open book."""
+        return Repositories(self.book().connection)
+
+    def open_repos(self) -> Repositories:
+        """The same, over a book that has to be there already."""
+        return Repositories(self.require_book().connection)
+
     def record(self, action: str, subject: str, detail: str = "") -> None:
         """Write what a command just did to the trail, inside its transaction."""
-        AuditRepository(self.book().connection).record(
-            self.season, action, subject, detail, datetime.now()
-        )
+        self.repos().audit.record(self.season, action, subject, detail, datetime.now())
 
     def close(self) -> None:
         if self._book is not None:

@@ -19,9 +19,17 @@ from moteroom.core.money import Money
 from moteroom.service.settlement import SettlementService
 from moteroom.settlement.equity import allocate_margin
 from moteroom.settlement.statement import Advance, Statement
+from moteroom.settlement.terms import Terms
 from moteroom.storage.rates import RatesRepository, default_terms
 from moteroom.storage.settlement import AdvanceRepository, StatementRepository
-from moteroom.storage.tickets import TicketRepository
+
+
+def posted_terms(session: Session) -> Terms:
+    """The season's posted rates, or the defaults if nobody has posted any."""
+    repos = session.open_repos()
+    if repos.rates.posted(session.season):
+        return repos.rates.get(session.season)
+    return default_terms()
 
 
 def statement_lines(made: Statement) -> list[tuple[str, str]]:
@@ -47,9 +55,8 @@ def settle() -> None:
 def post_rates(session: Session, show: bool) -> None:
     """Post this season's rates, or read the posted ones back."""
     book = session.book()
-    rates = RatesRepository(book.connection)
     if show:
-        click.echo(render_pairs(rates.lines(session.season)))
+        click.echo(render_pairs(session.repos().rates.lines(session.season)))
         return
     with book.transaction() as conn:
         RatesRepository(conn).post(session.season, default_terms(), date.today())
@@ -83,8 +90,7 @@ def advance(
 def preview(session: Session, producer: str) -> None:
     """Work a producer's settlement out without writing it down."""
     book = session.require_book()
-    rates = RatesRepository(book.connection)
-    terms = rates.get(session.season) if rates.posted(session.season) else default_terms()
+    terms = posted_terms(session)
     service = SettlementService(book, terms)
     code = producer.strip().upper()
     made = service.build(session.season, code)
@@ -119,8 +125,7 @@ def preview(session: Session, producer: str) -> None:
 def run_settlement(session: Session, producer: str, on_text: str | None) -> None:
     """Settle a producer and write it down."""
     book = session.require_book()
-    rates = RatesRepository(book.connection)
-    terms = rates.get(session.season) if rates.posted(session.season) else default_terms()
+    terms = posted_terms(session)
     code = producer.strip().upper()
     with book.transaction() as conn:
         made = SettlementService(book, terms).build(session.season, code)
@@ -134,7 +139,7 @@ def run_settlement(session: Session, producer: str, on_text: str | None) -> None
 @click.pass_obj
 def list_settlements(session: Session) -> None:
     """Every settlement written this season."""
-    book = session.require_book()
+    repos = session.open_repos()
     rows = [
         [
             made.producer,
@@ -145,7 +150,7 @@ def list_settlements(session: Session) -> None:
             str(made.seed_credit),
             str(made.net),
         ]
-        for made in StatementRepository(book.connection).for_season(session.season)
+        for made in repos.statements.for_season(session.season)
     ]
     click.echo(
         render_table(
@@ -163,8 +168,7 @@ def list_settlements(session: Session) -> None:
 @click.pass_obj
 def equity(session: Session, margin: str, cash: int, retain: int) -> None:
     """Allocate the season's margin back to the members on ginned volume."""
-    book = session.require_book()
-    held = TicketRepository(book.connection).book(session.season)
+    held = session.open_repos().tickets.book(session.season)
     volume = {code: held.net_for_producer(code) for code in held.producers()}
     made = allocate_margin(session.season, Money.parse(margin), volume, cash, retain)
     rows = [
