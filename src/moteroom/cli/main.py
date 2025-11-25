@@ -28,6 +28,7 @@ from moteroom.cli.settling import settle
 from moteroom.cli.trail import audit
 from moteroom.cli.warehousing import order, receipt
 from moteroom.core.errors import MoteroomError
+from moteroom.service import closing
 from moteroom.storage.migrations import LATEST
 
 
@@ -93,6 +94,20 @@ main.add_command(report)
 main.add_command(loan)
 main.add_command(contract)
 main.add_command(audit)
+
+
+@main.command("close")
+@click.pass_obj
+def close(session: Session) -> None:
+    """Say whether the season is finished with, and what is left if not."""
+    book = session.require_book()
+    made = closing.check(book, session.season)
+    for check in made.checks:
+        click.echo(str(check))
+    click.echo()
+    click.echo(str(made))
+    if not made.can_close:
+        raise SystemExit(1)
 
 
 def run() -> int:

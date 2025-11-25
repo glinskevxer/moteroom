@@ -100,3 +100,41 @@ def test_requiring_a_book_that_is_there(tmp_path):
     session = Session.build(path, "2025", date(2025, 10, 14))
     assert session.require_book().version > 0
     session.close()
+
+
+def test_closing_an_empty_season_passes(runner, tmp_path):
+    path = tmp_path / "season.sqlite3"
+    runner.invoke(main, ["--book", str(path), "init"])
+    result = runner.invoke(main, ["--book", str(path), "--season", "2025", "close"])
+    assert result.exit_code == 0
+    assert "can close" in result.output
+    assert "ok   modules ginned" in result.output
+
+
+def test_closing_a_season_with_cotton_in_the_yard_fails(runner, tmp_path):
+    path = tmp_path / "season.sqlite3"
+    base = ["--book", str(path), "--season", "2025"]
+    runner.invoke(main, [*base, "producer", "add", "BLYTHE", "Blythe Farms"])
+    runner.invoke(
+        main,
+        [
+            *base,
+            "ticket",
+            "weigh",
+            "HW-004181",
+            "BLYTHE",
+            "3312",
+            "38400",
+            "17200",
+            "--on",
+            "2025-10-14",
+        ],
+    )
+    result = runner.invoke(main, [*base, "close"])
+    assert result.exit_code != 0
+    assert "still in the yard" in result.output
+
+
+def test_closing_a_book_that_is_not_there(runner, tmp_path):
+    result = runner.invoke(main, ["--book", str(tmp_path / "none.sqlite3"), "close"])
+    assert result.exit_code != 0
