@@ -185,3 +185,47 @@ def test_a_certificate_that_runs_backwards_is_refused(seeded):
     assert (
         seeded("ticket", "scale", "TB01", "2025-07-01", "--as-of", "2025-08-01").exit_code != 0
     )
+
+
+CSV = (
+    "Module,Producer,Farm,Gross,Tare,Moisture,Weighed\n"
+    "HW-004181,blythe,3312,38400,17200,9.4,2025-10-14\n"
+    "HW-004182,blythe,3312,39100,17200,8.2,2025-10-14\n"
+)
+
+
+def test_tickets_import_from_the_weighbridge_export(seeded, tmp_path):
+    path = tmp_path / "tickets.csv"
+    path.write_text(CSV, encoding="utf-8")
+    made = seeded("ticket", "import", str(path))
+    assert made.exit_code == 0
+    assert "loaded 2 of 2" in made.output
+    assert "HW-004182" in seeded("ticket", "list").output
+
+
+def test_a_bad_row_is_skipped_and_the_rest_load(seeded, tmp_path):
+    path = tmp_path / "tickets.csv"
+    path.write_text(CSV + "HW-004183,GHOST,3312,38400,17200,9.4,2025-10-14\n", encoding="utf-8")
+    made = seeded("ticket", "import", str(path))
+    assert "loaded 2 of 3" in made.output
+    assert "skipped HW-004183" in made.output
+
+
+def test_a_file_missing_a_column_is_refused(seeded, tmp_path):
+    path = tmp_path / "tickets.csv"
+    path.write_text("Module,Producer\nHW-004181,BLYTHE\n", encoding="utf-8")
+    assert seeded("ticket", "import", str(path)).exit_code != 0
+
+
+def test_tickets_export_and_import_back(seeded, tmp_path):
+    weigh(seeded, on="2025-10-14")
+    out = tmp_path / "out.csv"
+    made = seeded("ticket", "export", "--out", str(out))
+    assert "1 tickets written" in made.output
+    assert "HW-004182" in out.read_text()
+
+
+def test_the_export_prints_when_there_is_nowhere_to_write(seeded):
+    weigh(seeded, on="2025-10-14")
+    made = seeded("ticket", "export")
+    assert made.output.splitlines()[0].startswith("module,producer")

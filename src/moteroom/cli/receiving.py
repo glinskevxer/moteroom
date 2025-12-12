@@ -4,13 +4,15 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 
 import click
 
 from moteroom.cli.context import Session
 from moteroom.cli.options import as_of_option, on_option, read_date
 from moteroom.cli.output import render_pairs, render_table
-from moteroom.core.errors import ValidationError
+from moteroom.core.csvio import field, read_rows, write_rows
+from moteroom.core.errors import MoteroomError, ValidationError
 from moteroom.core.ids import ModuleId
 from moteroom.core.weight import Weight
 from moteroom.receiving.scale import Certificate, ScaleBook
@@ -228,3 +230,69 @@ def certify(
             ]
         )
     )
+
+
+TICKET_COLUMNS = ("module", "producer", "farm", "gross", "tare", "moisture", "weighed")
+
+
+@ticket.command("import")
+@click.argument("path", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.pass_obj
+def import_tickets(session: Session, path: Path) -> None:
+    """Load scale tickets out of the weighbridge export."""
+    book = session.book()
+    rows = read_rows(path.read_text(encoding="utf-8"), list(TICKET_COLUMNS))
+    written = 0
+    skipped: list[str] = []
+    with book.transaction() as conn:
+        tickets = TicketRepository(conn)
+        held = tickets.book(session.season)
+        for row in rows:
+            module = field(row, "module")
+            try:
+                one = ModuleTicket(
+                    number=tickets.next_number(session.season),
+                    module=ModuleId.parse(module),
+                    producer=field(row, "producer").upper(),
+                    farm=field(row, "farm"),
+                    weighed_on=read_date(field(row, "weighed"), session.season.start),
+                    gross=Weight.parse(field(row, "gross")),
+                    tare=Weight.parse(field(row, "tare")),
+                    moisture=clean_moisture(field(row, "moisture")),
+                )
+                held.add(one)
+                tickets.add(one)
+            except MoteroomError as exc:
+                skipped.append(f"{module}: {exc}")
+                continue
+            written += 1
+        session.record("import", str(path.name), f"{written} of {len(rows)} tickets")
+    click.echo(f"loaded {written} of {len(rows)} tickets")
+    for line in skipped:
+        click.echo(f"  skipped {line}")
+
+
+@ticket.command("export")
+@click.option("--out", "out_path", default=None, help="Write the file here instead of stdout.")
+@click.pass_obj
+def export_tickets(session: Session, out_path: str | None) -> None:
+    """Write this season's live tickets back out as a csv."""
+    held = session.open_repos().tickets.book(session.season)
+    rows = [
+        [
+            str(one.module),
+            one.producer,
+            one.farm,
+            str(one.gross.pounds),
+            str(one.tare.pounds),
+            str(one.moisture),
+            one.weighed_on.isoformat(),
+        ]
+        for one in held.live()
+    ]
+    text = write_rows(list(TICKET_COLUMNS), rows)
+    if out_path:
+        Path(out_path).write_text(text, encoding="utf-8")
+        click.echo(f"{len(rows)} tickets written to {out_path}")
+        return
+    click.echo(text, nl=False)
