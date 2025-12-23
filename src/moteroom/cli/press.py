@@ -7,6 +7,8 @@ issue the same number.
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 import click
 
 from moteroom.cli.context import Session
@@ -14,7 +16,9 @@ from moteroom.cli.options import on_option, read_date
 from moteroom.cli.output import render_pairs, render_table
 from moteroom.core.errors import ConflictError
 from moteroom.core.ids import LotId
+from moteroom.core.money import CentsPerPound
 from moteroom.core.weight import Weight, total
+from moteroom.press.restoration import Restoration
 from moteroom.receiving.ticket import clean_moisture
 from moteroom.storage.lots import BaleRepository, LotRepository
 from moteroom.storage.settings import SettingsRepository
@@ -114,3 +118,27 @@ def show_bale(session: Session, bale_id: str) -> None:
             ]
         )
     )
+
+
+@bale.command("restore")
+@click.argument("dry_weight")
+@click.argument("before")
+@click.option(
+    "--to", "target", default="7.5", show_default=True, help="Moisture to restore to."
+)
+@click.option("--price", default=None, help="Lint price, to value the water added.")
+def restore(dry_weight: str, before: str, target: str, price: str | None) -> None:
+    """Work out what restoring moisture does to a press weight."""
+    made = Restoration(Weight.parse(dry_weight), Decimal(before), Decimal(target))
+    rows = [
+        ("dry weight", str(made.dry_weight)),
+        ("before", f"{made.before}%"),
+        ("after", f"{made.after}%"),
+        ("restored", str(made.restored)),
+        ("added", str(made.added)),
+        ("gain", f"{made.gain}%"),
+        ("ceiling", "over" if made.over_ceiling else "inside"),
+    ]
+    if price:
+        rows.append(("water worth", str(made.value_of_water(CentsPerPound.parse(price)))))
+    click.echo(render_pairs(rows))

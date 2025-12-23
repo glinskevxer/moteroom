@@ -95,3 +95,24 @@ def test_a_tag_that_will_not_read(pressed):
 
 def test_a_bale_nobody_pressed(pressed):
     assert pressed("bale", "show", "541207000019").exit_code != 0
+
+
+def test_restoration_reports_the_water_added(pressed):
+    made = pressed("bale", "restore", "500", "5.0", "--to", "7.0")
+    assert made.exit_code == 0
+    assert "added       11 lb" in made.output
+    assert "ceiling     inside" in made.output
+
+
+def test_restoration_can_price_the_water(pressed):
+    made = pressed("bale", "restore", "500", "5.0", "--to", "7.0", "--price", "52.00")
+    assert "$5.72" in made.output
+
+
+def test_restoration_past_the_ceiling_says_so(pressed):
+    made = pressed("bale", "restore", "500", "5.0", "--to", "8.0")
+    assert "ceiling     over" in made.output
+
+
+def test_restoration_cannot_take_moisture_out(pressed):
+    assert pressed("bale", "restore", "500", "7.0", "--to", "5.0").exit_code != 0
