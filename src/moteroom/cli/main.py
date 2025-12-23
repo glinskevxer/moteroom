@@ -29,6 +29,7 @@ from moteroom.cli.trail import audit
 from moteroom.cli.warehousing import order, receipt
 from moteroom.core.errors import MoteroomError
 from moteroom.service import closing
+from moteroom.storage.backup import backup, verify
 from moteroom.storage.migrations import LATEST
 
 
@@ -94,6 +95,27 @@ main.add_command(report)
 main.add_command(loan)
 main.add_command(contract)
 main.add_command(audit)
+
+
+@main.command("backup")
+@click.argument("target", type=click.Path(path_type=Path))
+@click.pass_obj
+def take_backup(session: Session, target: Path) -> None:
+    """Copy the book somewhere safe, through sqlite rather than the filesystem."""
+    book = session.require_book()
+    made = backup(book, target)
+    click.echo(f"copied {session.book_path} to {made}")
+
+
+@main.command("verify")
+@click.argument("target", type=click.Path(path_type=Path), required=False)
+@click.pass_obj
+def verify_book(session: Session, target: Path | None) -> None:
+    """Ask sqlite whether a book is intact."""
+    verdict = verify(target or session.book_path)
+    click.echo(str(verdict))
+    if not verdict.is_sound:
+        raise SystemExit(1)
 
 
 @main.command("close")

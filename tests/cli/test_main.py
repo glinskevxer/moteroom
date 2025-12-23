@@ -138,3 +138,34 @@ def test_closing_a_season_with_cotton_in_the_yard_fails(runner, tmp_path):
 def test_closing_a_book_that_is_not_there(runner, tmp_path):
     result = runner.invoke(main, ["--book", str(tmp_path / "none.sqlite3"), "close"])
     assert result.exit_code != 0
+
+
+def test_a_backup_copies_the_book(runner, tmp_path):
+    path = tmp_path / "season.sqlite3"
+    runner.invoke(main, ["--book", str(path), "init"])
+    copy = tmp_path / "copy.sqlite3"
+    result = runner.invoke(main, ["--book", str(path), "backup", str(copy)])
+    assert result.exit_code == 0
+    assert copy.exists()
+    assert "copied" in result.output
+
+
+def test_a_backup_will_not_write_over_something(runner, tmp_path):
+    path = tmp_path / "season.sqlite3"
+    runner.invoke(main, ["--book", str(path), "init"])
+    copy = tmp_path / "copy.sqlite3"
+    runner.invoke(main, ["--book", str(path), "backup", str(copy)])
+    assert runner.invoke(main, ["--book", str(path), "backup", str(copy)]).exit_code != 0
+
+
+def test_verify_reads_the_book_it_is_given(runner, tmp_path):
+    path = tmp_path / "season.sqlite3"
+    runner.invoke(main, ["--book", str(path), "init"])
+    result = runner.invoke(main, ["--book", str(path), "verify"])
+    assert result.exit_code == 0
+    assert "is sound" in result.output
+
+
+def test_verify_fails_on_a_book_that_is_not_there(runner, tmp_path):
+    result = runner.invoke(main, ["--book", str(tmp_path / "none.sqlite3"), "verify"])
+    assert result.exit_code != 0
