@@ -99,6 +99,7 @@ def quality_report(session: Session, kind: str, csv_out: bool) -> None:
     type=click.Choice(["house", "holder"]),
     default="house",
     show_default=True,
+    help="Count by warehouse or by who holds the receipt.",
 )
 @click.option("--as-of", "as_of", default=None, help="Position date, YYYY-MM-DD.")
 @as_csv
