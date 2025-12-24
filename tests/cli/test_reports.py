@@ -189,3 +189,23 @@ def test_the_inventory_moves_a_bale_into_store(worked):
     made = worked("report", "inventory")
     assert "in store" in made.output
     assert "1 at the gin, 1 in store" in made.output
+
+
+def test_the_season_page_reads_off_the_book(worked):
+    made = worked("report", "season")
+    assert made.exit_code == 0
+    assert "turnout" in made.output
+    assert "modules" in made.output
+    assert "2 bales off 1 modules" in made.output
+
+
+def test_the_season_page_on_an_empty_book(run):
+    run("init")
+    made = run("report", "season")
+    assert made.exit_code == 0
+    assert "0.00%" in made.output
+
+
+def test_the_season_page_comes_out_as_csv(worked):
+    made = worked("report", "season", "--csv")
+    assert made.output.splitlines()[0] == "measure,value"

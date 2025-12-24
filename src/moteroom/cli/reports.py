@@ -14,14 +14,17 @@ from typing import Any
 import click
 
 from moteroom.cli.context import Session
+from moteroom.cli.loans import base_rate
 from moteroom.cli.options import as_of_option, csv_option, read_date
 from moteroom.cli.output import render_report
 from moteroom.core.errors import ValidationError
 from moteroom.core.money import Money
 from moteroom.core.weight import total
 from moteroom.ginning.reconcile import reconcile
+from moteroom.loan import pool
 from moteroom.receiving.yard import ModuleYard
 from moteroom.reporting import daily, exceptions, position, quality
+from moteroom.reporting import season as season_report
 from moteroom.reporting.report import Report
 from moteroom.reporting.settlement import settlement_summary, statement_report, unsettled
 from moteroom.service import inventory
@@ -239,3 +242,34 @@ def inventory_report(session: Session, csv_out: bool) -> None:
         ),
         csv_out,
     )
+
+
+@report.command("season")
+@csv_option
+@click.pass_obj
+def season_summary(session: Session, csv_out: bool) -> None:
+    """The whole season on one page."""
+    repos = session.open_repos()
+    tickets = repos.tickets.book(session.season)
+    runs = repos.lots.for_season(session.season)
+    bales = repos.bales.for_season(session.season)
+    cards = repos.cards.for_season(session.season)
+    priced = pool.build(
+        [(one, repos.cards.get(one.bale_id)) for one in bales if repos.cards.has(one.bale_id)],
+        base_rate(session),
+    )
+    facts = season_report.Facts(
+        season=session.season,
+        producers=len(tickets.producers()),
+        modules=len(tickets),
+        seed_cotton=tickets.net(),
+        lint=total([run.lint for run in runs]),
+        seed=total([run.seed for run in runs]),
+        motes=total([run.motes for run in runs]),
+        bales=len(bales),
+        classed=len(cards),
+        white=sum(1 for card in cards if card.color.is_white),
+        loan_value=priced.value,
+        settled=len(repos.statements.for_season(session.season)),
+    )
+    emit(season_report.summary(facts), csv_out)
