@@ -131,3 +131,32 @@ def test_a_time_that_will_not_read(ginned):
 
 def test_a_stoppage_longer_than_the_shift(ginned):
     assert ginned("lot", "shift", "07:00", "19:00", "360", "--stop", "choke:900").exit_code != 0
+
+
+def test_a_mote_sale_shares_out_across_the_producers(ginned):
+    made = ginned("lot", "byproduct", "motes", "24000", "180.00", "--on", "2025-11-04")
+    assert made.exit_code == 0
+    assert "12.000 tons of motes made 2160.00" in made.output
+    assert "BLYTHE" in made.output
+
+
+def test_a_disposal_reads_as_a_cost(ginned):
+    made = ginned(
+        "lot", "byproduct", "trash", "24000", "22.50", "--disposal", "--on", "2025-11-04"
+    )
+    assert "cost 270.00" in made.output
+
+
+def test_a_negative_rate_says_to_use_the_flag(ginned):
+    assert ginned("lot", "byproduct", "trash", "24000", "--", "-22.50").exit_code != 0
+
+
+def test_a_kind_the_plant_does_not_sell(ginned):
+    assert ginned("lot", "byproduct", "lint", "24000", "180.00").exit_code != 0
+
+
+def test_a_sale_with_nobody_ginning_still_prices(run: Run) -> None:
+    run("init")
+    made = run("lot", "byproduct", "motes", "24000", "180.00")
+    assert made.exit_code == 0
+    assert "BLYTHE" not in made.output

@@ -14,7 +14,9 @@ from moteroom.cli.options import on_option, read_date, read_time
 from moteroom.cli.output import render_pairs, render_table
 from moteroom.core.errors import ConflictError, ValidationError
 from moteroom.core.ids import LotId
+from moteroom.core.money import Money
 from moteroom.core.weight import Weight, total
+from moteroom.ginning.byproduct import KINDS, ByproductLedger, Sale
 from moteroom.ginning.plant import Shift, ShiftLog, Stoppage
 from moteroom.ginning.reconcile import reconcile
 from moteroom.ginning.run import GinRun
@@ -209,3 +211,47 @@ def log_shift(
             ]
         )
     )
+
+
+@lot.command("byproduct")
+@click.argument("kind", type=click.Choice(sorted(KINDS)))
+@click.argument("weight")
+@click.argument("price")
+@click.option("--buyer", default="MILL", show_default=True, help="Who took the load.")
+@click.option(
+    "--disposal",
+    is_flag=True,
+    help="The plant paid this rate to have the load hauled away.",
+)
+@on_option("Sale date")
+@click.pass_obj
+def byproduct(
+    session: Session,
+    kind: str,
+    weight: str,
+    price: str,
+    buyer: str,
+    disposal: bool,
+    on_text: str | None,
+) -> None:
+    """Price a load of motes or gin trash and share it out."""
+    rate = Money.parse(price)
+    if rate.amount < 0:
+        raise ValidationError("price", "a disposal is a positive rate with --disposal")
+    made = Sale(
+        kind=kind,
+        sold_on=read_date(on_text, session.season.start),
+        weight=Weight.parse(weight),
+        price_per_ton=-rate if disposal else rate,
+        buyer=buyer.strip().upper(),
+    )
+    ledger = ByproductLedger()
+    ledger.sell(made)
+    held = session.open_repos().tickets.book(session.season)
+    volume = {code: held.net_for_producer(code) for code in held.producers()}
+    click.echo(str(made))
+    if not volume:
+        return
+    rows = [[code, str(amount)] for code, amount in sorted(ledger.allocate(volume).items())]
+    click.echo()
+    click.echo(render_table(["producer", "share"], rows, right=(1,)))
