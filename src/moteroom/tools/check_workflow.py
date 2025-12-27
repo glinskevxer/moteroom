@@ -14,7 +14,7 @@ from moteroom.tools.gate import REPO_ROOT, Finding, report
 
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "ci.yml"
 PYTHON_VERSIONS = ("3.12", "3.13")
-REQUIRED_STEPS = ("ruff check", "ruff format --check", "mypy", "pytest")
+REQUIRED_STEPS = ("ruff check", "ruff format --check", "mypy", "pytest", "--cov=moteroom")
 
 
 def gate_modules() -> list[str]:

@@ -62,7 +62,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - run: pip install -e ".[dev]"
-      - run: pytest --cov=moteroom --cov-report=term-missing
+      - run: pytest --cov=moteroom --cov-report=term-missing --cov-report=json
+      - run: python -m moteroom.tools.check_coverage
 
   build:
     runs-on: ubuntu-latest
