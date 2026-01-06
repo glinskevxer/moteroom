@@ -63,9 +63,11 @@ def test_the_totals_sit_under_the_table():
     assert "turnout 35.14%" in sheet.notes[1]
 
 
-def test_the_average_bale_needs_bales():
+def test_the_average_bale_comes_off_the_bales_themselves():
     assert "no bales" in daily_sheet(DAY, [run(1)], []).notes[2]
-    assert "14,900 lb" in daily_sheet(DAY, [run(1)], [bale(1)]).notes[2]
+    assert "515 lb" in daily_sheet(DAY, [run(1)], [bale(1)]).notes[2]
+    two = daily_sheet(DAY, [run(1)], [bale(1), bale(2)])
+    assert "515 lb" in two.notes[2]
 
 
 def test_the_turnout_column_reads_per_lot():

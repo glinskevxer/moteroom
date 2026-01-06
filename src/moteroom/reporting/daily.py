@@ -55,19 +55,24 @@ def _totals(runs: Sequence[GinRun], by_lot: dict[str, list[Bale]]) -> tuple[str,
         return ("nothing ginned",)
     seed_cotton = total([run.seed_cotton for run in runs])
     lint = total([run.lint for run in runs])
-    bales = sum(len(by_lot.get(str(run.lot), [])) for run in runs)
+    pressed = [one for run in runs for one in by_lot.get(str(run.lot), [])]
     turnout = percent(lint, seed_cotton)
     return (
-        f"{len(runs)} lots, {seed_cotton} in, {lint} of lint, {bales} bales",
+        f"{len(runs)} lots, {seed_cotton} in, {lint} of lint, {len(pressed)} bales",
         f"turnout {turnout}%",
-        f"average bale {_average(lint, bales)}",
+        f"average bale {_average(pressed)}",
     )
 
 
-def _average(lint: Weight, bales: int) -> str:
-    if bales == 0:
+def _average(pressed: Sequence[Bale]) -> str:
+    """The average off the bales themselves, not off the lot sheet.
+
+    A lot part way through the press has its whole lint weight on the sheet and
+    two bales under it, and dividing one by the other says nothing.
+    """
+    if not pressed:
         return "no bales"
-    return str(Weight(lint.pounds // bales))
+    return str(Weight(total([one.net for one in pressed]).pounds // len(pressed)))
 
 
 def running_turnout(runs: Sequence[GinRun]) -> Decimal:
