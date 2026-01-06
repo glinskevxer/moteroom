@@ -16,6 +16,7 @@ from moteroom.storage.lots import BaleRepository
 from moteroom.storage.settings import SettingsRepository
 from moteroom.storage.warehouse import OrderRepository, ReceiptRepository
 from moteroom.warehouse.ewr import parse_acknowledgement, render_transfer, transfer_weight
+from moteroom.warehouse.movement import arrive, send
 from moteroom.warehouse.receipt import Receipt
 from moteroom.warehouse.shipping import ShippingOrder, check_against, plan_loads
 
@@ -222,3 +223,41 @@ def acknowledge(session: Session, path: Path, to: str | None, on_text: str | Non
         for number in answer.accepted:
             held.release(number, when, to.strip().upper())
     click.echo(f"released {len(answer.accepted)} receipts to {to.strip().upper()}")
+
+
+@receipt.command("move")
+@click.argument("number")
+@click.argument("house")
+@click.argument("new_number")
+@click.option("--holder", default=None, help="Who holds it at the new house.")
+@on_option("Movement date")
+@click.option("--arrived", default=None, help="Arrival date, Y-m-d, if it is there.")
+@click.pass_obj
+def move(
+    session: Session,
+    number: str,
+    house: str,
+    new_number: str,
+    holder: str | None,
+    on_text: str | None,
+    arrived: str | None = None,
+) -> None:
+    """Move a bale to another warehouse, which is two receipts and a gap."""
+    book = session.require_book()
+    left_on = read_date(on_text, session.season.end)
+    with book.transaction() as conn:
+        receipts = ReceiptRepository(conn)
+        held = receipts.get(number.strip().upper())
+        movement = send(held, house, left_on)
+        receipts.release(held.number, left_on, movement.arrived)
+        if arrived:
+            closed, made = arrive(
+                movement,
+                new_number,
+                read_date(arrived, session.season.end),
+                holder or held.holder,
+            )
+            receipts.issue(made)
+            movement = closed
+        session.record("move", str(movement.bale_id), f"{movement.left} to {movement.arrived}")
+    click.echo(str(movement))

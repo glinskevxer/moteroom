@@ -185,3 +185,44 @@ def test_an_acknowledgement_that_will_not_read(stored, tmp_path):
     answer = tmp_path / "ack.txt"
     answer.write_text("nonsense\n", encoding="utf-8")
     assert stored("receipt", "acknowledge", str(answer)).exit_code != 0
+
+
+def test_a_bale_moves_between_houses(stored):
+    issue(stored, 1, on="2025-10-20")
+    made = stored("receipt", "move", "MW00000001", "MW15", "MX00000001", "--on", "2026-01-12")
+    assert made.exit_code == 0
+    assert "in transit" in made.output
+    assert "(nothing)" in stored("receipt", "list").output
+
+
+def test_a_bale_that_arrives_gets_the_second_receipt(stored):
+    issue(stored, 1, on="2025-10-20")
+    made = stored(
+        "receipt",
+        "move",
+        "MW00000001",
+        "MW15",
+        "MX00000001",
+        "--on",
+        "2026-01-12",
+        "--arrived",
+        "2026-01-14",
+    )
+    assert "moved MW14 to MW15" in made.output
+    listed = stored("receipt", "list")
+    assert "MX00000001" in listed.output
+    assert "MW15" in listed.output
+
+
+def test_moving_a_receipt_nobody_issued(stored):
+    assert stored("receipt", "move", "MW00000009", "MW15", "MX00000001").exit_code != 0
+
+
+def test_a_bale_does_not_move_to_the_house_it_is_in(stored):
+    issue(stored, 1, on="2025-10-20")
+    assert (
+        stored(
+            "receipt", "move", "MW00000001", "MW14", "MX00000001", "--on", "2026-01-12"
+        ).exit_code
+        != 0
+    )
