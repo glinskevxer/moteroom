@@ -12,8 +12,10 @@ from pathlib import Path
 
 import click
 
+from moteroom.classing.reclass import Request, render_requests
 from moteroom.classing.transfer import parse_file
 from moteroom.cli.context import Session
+from moteroom.cli.options import on_option, read_date
 from moteroom.cli.output import render_pairs, render_table
 from moteroom.core.errors import ConflictError, ValidationError
 from moteroom.core.ids import BaleId
@@ -135,3 +137,41 @@ def correct_cards(session: Session, path: Path) -> None:
             cards.replace(record)
             replaced += 1
     click.echo(f"replaced {replaced} cards")
+
+
+@card.command("reclass")
+@click.argument("bales", nargs=-1)
+@click.option("--reason", required=True, help="Why the bale is going back.")
+@click.option("--by", "asked_by", required=True, help="Who is asking.")
+@click.option("--out", "out_path", default=None, help="Write the file here instead of stdout.")
+@on_option("Request date")
+@click.pass_obj
+def reclass(
+    session: Session,
+    bales: tuple[str, ...],
+    reason: str,
+    asked_by: str,
+    out_path: str | None,
+    on_text: str | None,
+) -> None:
+    """Ask the office to look at a bale again."""
+    if not bales:
+        raise ValidationError("bales", "a re-class has to name a bale")
+    repos = session.open_repos()
+    when = read_date(on_text, session.season.end)
+    office = repos.settings.get_or("classing_office", "MEMPHIS")
+    requests = []
+    for text in bales:
+        tag = BaleId.parse(text)
+        repos.cards.get(tag)
+        requests.append(
+            Request(
+                bale_id=tag, asked_on=when, reason=reason, asked_by=asked_by.strip().upper()
+            )
+        )
+    made = render_requests(requests, office, when)
+    if out_path:
+        Path(out_path).write_text(made + "\n", encoding="utf-8")
+        click.echo(f"{len(requests)} bales back to {office}, written to {out_path}")
+        return
+    click.echo(made)

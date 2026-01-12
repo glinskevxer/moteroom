@@ -123,3 +123,51 @@ def test_a_correction_file_has_to_read_cleanly(classed, tmp_path):
     classed("card", "load", write(tmp_path, transfer(line(tag(1)))))
     path = write(tmp_path, transfer(line(tag(1)), "junk"), "fix.txt")
     assert classed("card", "correct", path).exit_code != 0
+
+
+def test_a_reclass_writes_the_office_a_request(classed, tmp_path):
+    classed("card", "load", write(tmp_path, transfer(line(tag(1)))))
+    made = classed(
+        "card",
+        "reclass",
+        tag(1),
+        "--reason",
+        "producer disputes the leaf",
+        "--by",
+        "BLYTHE",
+        "--on",
+        "2025-11-03",
+    )
+    assert made.exit_code == 0
+    assert made.output.splitlines()[0].startswith("RCLHDR")
+    assert "disputes" in made.output
+
+
+def test_a_reclass_can_be_written_to_a_file(classed, tmp_path):
+    classed("card", "load", write(tmp_path, transfer(line(tag(1)))))
+    out = tmp_path / "requests.txt"
+    made = classed(
+        "card",
+        "reclass",
+        tag(1),
+        "--reason",
+        "leaf",
+        "--by",
+        "BLYTHE",
+        "--out",
+        str(out),
+        "--on",
+        "2025-11-03",
+    )
+    assert "1 bales back to" in made.output
+    assert str(tag(1)) in out.read_text()
+
+
+def test_a_reclass_of_a_bale_with_no_card(classed):
+    assert (
+        classed("card", "reclass", tag(1), "--reason", "leaf", "--by", "BLYTHE").exit_code != 0
+    )
+
+
+def test_a_reclass_naming_nothing(classed):
+    assert classed("card", "reclass", "--reason", "leaf", "--by", "BLYTHE").exit_code != 0
