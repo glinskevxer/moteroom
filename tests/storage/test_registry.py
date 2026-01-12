@@ -15,7 +15,7 @@ def repos():
 def test_the_registry_holds_one_of_each(repos):
     assert isinstance(repos.tickets, TicketRepository)
     assert isinstance(repos.cards, CardRepository)
-    assert len(repos.names()) == 14
+    assert len(repos.names()) == 15
 
 
 def test_every_repository_shares_the_one_connection(repos):

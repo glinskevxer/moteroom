@@ -17,10 +17,13 @@ from moteroom.cli.options import on_option, read_date
 from moteroom.cli.output import render_pairs, render_table
 from moteroom.core.money import Money
 from moteroom.service.settlement import SettlementService
+from moteroom.settlement.cheque import Cheque
 from moteroom.settlement.equity import allocate_margin
 from moteroom.settlement.statement import Advance, Statement
 from moteroom.settlement.terms import Terms
+from moteroom.storage.cheques import ChequeRepository
 from moteroom.storage.rates import RatesRepository, default_terms
+from moteroom.storage.registry import Repositories
 from moteroom.storage.settlement import AdvanceRepository, StatementRepository
 
 
@@ -188,3 +191,71 @@ def equity(session: Session, margin: str, cash: int, retain: int) -> None:
     )
     click.echo()
     click.echo(f"{made.members} members, {made.cash} in cash and {made.retained} retained")
+
+
+@settle.command("cheque")
+@click.argument("producer")
+@click.option("--amount", default=None, help="Amount, or the settled net if left out.")
+@click.option("--number", default=None, help="Cheque number, or the next one.")
+@on_option("Cheque date")
+@click.pass_obj
+def write_cheque(
+    session: Session, producer: str, amount: str | None, number: str | None, on_text: str | None
+) -> None:
+    """Write a cheque against a settlement already run."""
+    book = session.require_book()
+    code = producer.strip().upper()
+    when = read_date(on_text, session.season.end)
+    with book.transaction() as conn:
+        repos = Repositories(conn)
+        register = repos.cheques.register(session.season)
+        due = Money.parse(amount) if amount else repos.statements.get(session.season, code).net
+        made = Cheque(
+            number=number or register.next_number(),
+            payee=code,
+            amount=due,
+            issued_on=when,
+        )
+        repos.cheques.issue(made, session.season)
+        session.record("cheque", code, f"{made.number} for {made.amount}")
+    click.echo(str(made))
+
+
+@settle.command("cleared")
+@click.argument("number")
+@on_option("Clearing date")
+@click.option("--void", "reason", default=None, help="Void it with this reason instead.")
+@click.pass_obj
+def clear_cheque(
+    session: Session, number: str, on_text: str | None, reason: str | None
+) -> None:
+    """Mark a cheque cleared, or void it."""
+    book = session.require_book()
+    when = read_date(on_text, session.season.end)
+    with book.transaction() as conn:
+        cheques = ChequeRepository(conn)
+        made = cheques.void(number, when, reason) if reason else cheques.clear(number, when)
+    click.echo(str(made))
+
+
+@settle.command("cheques")
+@click.pass_obj
+def list_cheques(session: Session) -> None:
+    """Every cheque written this season."""
+    register = session.open_repos().cheques.register(session.season)
+    rows = [
+        [
+            one.number,
+            one.payee,
+            str(one.amount),
+            one.issued_on.isoformat(),
+            "voided" if one.is_voided else "outstanding" if one.is_outstanding else "cleared",
+        ]
+        for one in register.cheques()
+    ]
+    click.echo(
+        render_table(["cheque", "payee", "amount", "written", "state"], rows, right=(2,))
+    )
+    if rows:
+        click.echo()
+        click.echo(f"{register.owed()} outstanding, {register.paid()} cleared")

@@ -125,3 +125,51 @@ def test_a_loss_is_not_allocated(ginned):
 def test_allocating_with_nothing_ginned(run: Run) -> None:
     run("producer", "add", "BLYTHE", "Blythe Farms")
     assert run("settle", "equity", "30000.00").exit_code != 0
+
+
+def test_a_cheque_pays_what_the_settlement_said(ginned):
+    ginned("settle", "rates")
+    ginned("settle", "run", "BLYTHE", "--on", "2026-02-03")
+    made = ginned("settle", "cheque", "blythe", "--on", "2026-02-03")
+    assert made.exit_code == 0
+    assert "cheque 1001 to BLYTHE" in made.output
+    assert "outstanding" in ginned("settle", "cheques").output
+
+
+def test_a_cheque_for_a_producer_nobody_settled(ginned):
+    assert ginned("settle", "cheque", "BLYTHE").exit_code != 0
+
+
+def test_a_cheque_can_name_its_own_amount(ginned):
+    made = ginned(
+        "settle",
+        "cheque",
+        "BLYTHE",
+        "--amount",
+        "500.00",
+        "--number",
+        "2001",
+        "--on",
+        "2026-02-03",
+    )
+    assert "cheque 2001" in made.output
+    assert "$500.00" in made.output
+
+
+def test_a_cheque_clears_and_another_voids(ginned):
+    ginned("settle", "cheque", "BLYTHE", "--amount", "500.00", "--on", "2026-02-03")
+    ginned("settle", "cheque", "MERRITT", "--amount", "400.00", "--on", "2026-02-03")
+    ginned("settle", "cleared", "1001", "--on", "2026-02-10")
+    ginned("settle", "cleared", "1002", "--on", "2026-02-10", "--void", "lost in the post")
+    listed = ginned("settle", "cheques")
+    assert "cleared" in listed.output
+    assert "voided" in listed.output
+    assert "$500.00 cleared" in listed.output
+
+
+def test_clearing_a_cheque_nobody_wrote(ginned):
+    assert ginned("settle", "cleared", "9999").exit_code != 0
+
+
+def test_an_empty_cheque_list_says_nothing(ginned):
+    assert "(nothing)" in ginned("settle", "cheques").output

@@ -39,6 +39,7 @@ EXPECTED_TABLES = {
     "contracts",
     "deliveries",
     "audit",
+    "cheques",
 }
 
 

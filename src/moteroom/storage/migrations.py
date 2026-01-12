@@ -293,6 +293,25 @@ MIGRATIONS: tuple[Migration, ...] = (
             "CREATE INDEX audit_by_season ON audit (season, at)",
         ),
     ),
+    Migration(
+        version=10,
+        description="the cheque register",
+        statements=(
+            """
+            CREATE TABLE cheques (
+                number      TEXT PRIMARY KEY,
+                season      INTEGER NOT NULL,
+                payee       TEXT NOT NULL REFERENCES producers(code),
+                amount      TEXT NOT NULL,
+                issued_on   TEXT NOT NULL,
+                cleared_on  TEXT,
+                voided_on   TEXT,
+                void_reason TEXT NOT NULL DEFAULT ''
+            )
+            """,
+            "CREATE INDEX cheques_by_payee ON cheques (season, payee)",
+        ),
+    ),
 )
 
 LATEST = MIGRATIONS[-1].version

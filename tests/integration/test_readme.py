@@ -14,6 +14,7 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from moteroom.cli.main import main
+from moteroom.storage.migrations import LATEST
 
 README = Path(__file__).resolve().parents[2] / "README.md"
 PROMPT = "$ moteroom "
@@ -65,7 +66,7 @@ def test_every_command_in_the_readme_prints_what_it_says(tmp_path: Path) -> None
         assert result.exit_code == 0, f"{command} failed: {result.output}"
         printed = result.output.rstrip("\n").splitlines()
         if command == ["init"]:
-            assert printed[0].endswith("at schema 9")
+            assert printed[0].endswith(f"at schema {LATEST}")
             continue
         assert printed == expected, f"{command} printed\n" + "\n".join(printed)
 
@@ -77,6 +78,11 @@ def test_the_readme_names_the_layout_that_exists():
         if package == "__pycache__":
             continue
         assert f"src/moteroom/{package}/" in text, f"{package} is not in the readme"
+
+
+def test_the_readme_quotes_the_schema_this_build_makes():
+    text = README.read_text(encoding="utf-8")
+    assert f"at schema {LATEST}" in text, "the readme quotes an older schema than this build"
 
 
 def test_the_readme_names_the_checks_ci_runs():

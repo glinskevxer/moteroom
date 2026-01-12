@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 
 from moteroom.storage.audit import AuditRepository
 from moteroom.storage.cards import CardRepository
+from moteroom.storage.cheques import ChequeRepository
 from moteroom.storage.contracts import ContractRepository
 from moteroom.storage.lots import BaleRepository, LotRepository
 from moteroom.storage.producers import FarmRepository, ProducerRepository
@@ -42,6 +43,7 @@ class Repositories:
     settings: SettingsRepository = field(init=False)
     rates: RatesRepository = field(init=False)
     audit: AuditRepository = field(init=False)
+    cheques: ChequeRepository = field(init=False)
 
     def __post_init__(self) -> None:
         self.producers = ProducerRepository(self.connection)
@@ -58,6 +60,7 @@ class Repositories:
         self.settings = SettingsRepository(self.connection)
         self.rates = RatesRepository(self.connection)
         self.audit = AuditRepository(self.connection)
+        self.cheques = ChequeRepository(self.connection)
 
     def names(self) -> list[str]:
         """What the registry holds, which the wiring gate reads."""
