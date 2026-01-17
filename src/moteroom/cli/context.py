@@ -8,6 +8,8 @@ started in.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
@@ -55,6 +57,18 @@ class Session:
     def open_repos(self) -> Repositories:
         """The same, over a book that has to be there already."""
         return Repositories(self.require_book().connection)
+
+    @contextmanager
+    def writing(self, make: bool = False) -> Iterator[Repositories]:
+        """A transaction with every repository over it.
+
+        Every command that writes wants the same three lines, and the third of
+        them is the one people forget: without the transaction a command that
+        raises halfway leaves the first half of its work behind.
+        """
+        book = self.book() if make else self.require_book()
+        with book.transaction() as connection:
+            yield Repositories(connection)
 
     def record(self, action: str, subject: str, detail: str = "") -> None:
         """Write what a command just did to the trail, inside its transaction."""

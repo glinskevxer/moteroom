@@ -21,8 +21,6 @@ from moteroom.ginning.plant import Shift, ShiftLog, Stoppage
 from moteroom.ginning.reconcile import reconcile
 from moteroom.ginning.run import GinRun
 from moteroom.ginning.turnout import summarise
-from moteroom.storage.lots import BaleRepository, LotRepository
-from moteroom.storage.tickets import TicketRepository
 
 
 def read_tickets(text: str) -> tuple[int, ...]:
@@ -59,11 +57,10 @@ def gin(
     on_text: str | None,
 ) -> None:
     """Gin a set of tickets as one lot."""
-    book = session.require_book()
     numbers = read_tickets(tickets)
-    with book.transaction() as conn:
-        ticket_repo = TicketRepository(conn)
-        lots = LotRepository(conn)
+    with session.writing() as repos:
+        ticket_repo = repos.tickets
+        lots = repos.lots
         held = ticket_repo.book(session.season)
         already = lots.assigned_tickets(session.season)
         weights: list[Weight] = []
@@ -92,8 +89,7 @@ def gin(
 @click.pass_obj
 def list_lots(session: Session) -> None:
     """Every lot this season with its turnout."""
-    book = session.require_book()
-    lots = LotRepository(book.connection)
+    lots = session.open_repos().lots
     rows = []
     for run in lots.for_season(session.season):
         line = summarise(run)
@@ -122,11 +118,10 @@ def list_lots(session: Session) -> None:
 @click.pass_obj
 def show_lot(session: Session, number: int) -> None:
     """One lot, with its turnout and how the press compared."""
-    book = session.require_book()
-    lots = LotRepository(book.connection)
+    lots = session.open_repos().lots
     run = lots.get(LotId(session.season, number))
     line = summarise(run)
-    bales = BaleRepository(book.connection).for_lot(run.lot)
+    bales = session.open_repos().bales.for_lot(run.lot)
     pressed = total([bale.net for bale in bales])
     check = reconcile(run, pressed, len(bales))
     click.echo(
@@ -154,10 +149,9 @@ def show_lot(session: Session, number: int) -> None:
 @click.pass_obj
 def close_lot(session: Session, number: int) -> None:
     """Say a lot is off the press."""
-    book = session.require_book()
     target = LotId(session.season, number)
-    with book.transaction() as conn:
-        lots = LotRepository(conn)
+    with session.writing() as repos:
+        lots = repos.lots
         if lots.is_closed(target):
             raise ConflictError("lot", str(target), "is already closed")
         lots.close(target)

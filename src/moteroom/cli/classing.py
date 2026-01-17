@@ -19,8 +19,6 @@ from moteroom.cli.options import on_option, read_date
 from moteroom.cli.output import render_pairs, render_table
 from moteroom.core.errors import ConflictError, ValidationError
 from moteroom.core.ids import BaleId
-from moteroom.storage.cards import CardRepository
-from moteroom.storage.lots import BaleRepository
 
 
 @click.group()
@@ -33,13 +31,12 @@ def card() -> None:
 @click.pass_obj
 def load_cards(session: Session, path: Path) -> None:
     """Load a classing transfer file."""
-    book = session.require_book()
     transfer = parse_file(path.read_text(encoding="utf-8"))
     loaded = 0
     skipped: list[tuple[str, str]] = []
-    with book.transaction() as conn:
-        cards = CardRepository(conn)
-        bales = BaleRepository(conn)
+    with session.writing() as repos:
+        cards = repos.cards
+        bales = repos.bales
         known = {str(one.bale_id) for one in bales.for_season(session.season)}
         for record in transfer.records:
             key = str(record.bale_id)
@@ -63,8 +60,7 @@ def load_cards(session: Session, path: Path) -> None:
 @click.pass_obj
 def show_card(session: Session, bale_id: str) -> None:
     """One card, as the office sent it."""
-    book = session.require_book()
-    found = CardRepository(book.connection).get(BaleId.parse(bale_id))
+    found = session.open_repos().cards.get(BaleId.parse(bale_id))
     click.echo(
         render_pairs(
             [
@@ -88,7 +84,6 @@ def show_card(session: Session, bale_id: str) -> None:
 @click.pass_obj
 def list_cards(session: Session) -> None:
     """Every card back this season."""
-    book = session.require_book()
     rows = [
         [
             str(found.bale_id),
@@ -98,7 +93,7 @@ def list_cards(session: Session) -> None:
             str(found.micronaire),
             " ".join(found.codes),
         ]
-        for found in CardRepository(book.connection).for_season(session.season)
+        for found in session.open_repos().cards.for_season(session.season)
     ]
     click.echo(
         render_table(
@@ -111,8 +106,7 @@ def list_cards(session: Session) -> None:
 @click.pass_obj
 def waiting(session: Session) -> None:
     """Bales pressed with no card back yet."""
-    book = session.require_book()
-    outstanding = CardRepository(book.connection).unclassed(session.season)
+    outstanding = session.open_repos().cards.unclassed(session.season)
     rows = [[str(one), one.grouped()] for one in outstanding]
     click.echo(render_table(["bale", "tag"], rows))
     click.echo()
@@ -124,13 +118,12 @@ def waiting(session: Session) -> None:
 @click.pass_obj
 def correct_cards(session: Session, path: Path) -> None:
     """Take a corrected transfer over cards already on file."""
-    book = session.require_book()
     transfer = parse_file(path.read_text(encoding="utf-8"))
     if transfer.rejects:
         raise ValidationError("transfer", "a correction file has to read cleanly")
     replaced = 0
-    with book.transaction() as conn:
-        cards = CardRepository(conn)
+    with session.writing() as repos:
+        cards = repos.cards
         for record in transfer.records:
             if not cards.has(record.bale_id):
                 raise ConflictError("card", str(record.bale_id), "was never classed")

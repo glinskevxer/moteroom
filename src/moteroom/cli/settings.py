@@ -8,7 +8,7 @@ import click
 
 from moteroom.cli.context import Session
 from moteroom.cli.output import render_table
-from moteroom.storage.settings import KNOWN, SettingsRepository
+from moteroom.storage.settings import KNOWN
 
 
 @click.group()
@@ -22,9 +22,8 @@ def setting() -> None:
 @click.pass_obj
 def set_setting(session: Session, name: str, value: str) -> None:
     """Write one setting."""
-    book = session.book()
-    with book.transaction() as conn:
-        cleaned = SettingsRepository(conn).set(name.strip().lower(), value, date.today())
+    with session.writing(True) as repos:
+        cleaned = repos.settings.set(name.strip().lower(), value, date.today())
     click.echo(f"{name.strip().lower()} is {cleaned}")
 
 
@@ -33,16 +32,14 @@ def set_setting(session: Session, name: str, value: str) -> None:
 @click.pass_obj
 def get_setting(session: Session, name: str) -> None:
     """Read one setting."""
-    book = session.require_book()
-    click.echo(SettingsRepository(book.connection).get(name.strip().lower()))
+    click.echo(session.open_repos().settings.get(name.strip().lower()))
 
 
 @setting.command("list")
 @click.pass_obj
 def list_settings(session: Session) -> None:
     """Every setting, and what is still missing."""
-    book = session.require_book()
-    held = SettingsRepository(book.connection)
+    held = session.open_repos().settings
     values = dict(held.all())
     rows = [[name, values.get(name, "-")] for name in sorted(KNOWN)]
     click.echo(render_table(["setting", "value"], rows))

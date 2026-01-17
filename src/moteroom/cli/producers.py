@@ -10,7 +10,6 @@ from moteroom.cli.context import Session
 from moteroom.cli.output import render_pairs, render_table
 from moteroom.core.errors import ValidationError
 from moteroom.receiving.party import Farm, Producer
-from moteroom.storage.producers import FarmRepository, ProducerRepository
 
 
 @click.group()
@@ -24,9 +23,8 @@ def producer() -> None:
 @click.pass_obj
 def add_producer(session: Session, code: str, name: str) -> None:
     """Put a grower on the book."""
-    book = session.book()
-    with book.transaction() as conn:
-        ProducerRepository(conn).add(Producer.parse(code, name))
+    with session.writing(True) as repos:
+        repos.producers.add(Producer.parse(code, name))
     click.echo(f"added {code.strip().upper()}")
 
 
@@ -34,9 +32,8 @@ def add_producer(session: Session, code: str, name: str) -> None:
 @click.pass_obj
 def list_producers(session: Session) -> None:
     """Every grower on the book."""
-    book = session.require_book()
-    people = ProducerRepository(book.connection).all()
-    farms = FarmRepository(book.connection)
+    people = session.open_repos().producers.all()
+    farms = session.open_repos().farms
     rows = [
         [grower.code, grower.name, str(len(farms.for_producer(grower.code)))]
         for grower in people
@@ -49,9 +46,8 @@ def list_producers(session: Session) -> None:
 @click.pass_obj
 def show_producer(session: Session, code: str) -> None:
     """One grower, with their farms and acres."""
-    book = session.require_book()
-    grower = ProducerRepository(book.connection).get(code.strip().upper())
-    farms = FarmRepository(book.connection)
+    grower = session.open_repos().producers.get(code.strip().upper())
+    farms = session.open_repos().farms
     held = farms.for_producer(grower.code)
     click.echo(
         render_pairs(
@@ -81,9 +77,6 @@ def add_farm(session: Session, code: str, number: str, tract: str, acres: str) -
         measured = Decimal(acres)
     except InvalidOperation as exc:
         raise ValidationError("acres", f"{acres!r} is not an acreage") from exc
-    book = session.book()
-    with book.transaction() as conn:
-        FarmRepository(conn).add(
-            Farm(number.strip(), tract.strip(), code.strip().upper(), measured)
-        )
+    with session.writing(True) as repos:
+        repos.farms.add(Farm(number.strip(), tract.strip(), code.strip().upper(), measured))
     click.echo(f"added farm {number}-{tract} to {code.strip().upper()}")

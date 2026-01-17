@@ -18,8 +18,6 @@ from moteroom.core.weight import Weight
 from moteroom.receiving.scale import Certificate, ScaleBook
 from moteroom.receiving.ticket import ModuleTicket, clean_moisture
 from moteroom.receiving.yard import ModuleYard
-from moteroom.storage.lots import LotRepository
-from moteroom.storage.tickets import TicketRepository
 
 
 @click.group()
@@ -47,12 +45,11 @@ def weigh(
     on_text: str | None,
 ) -> None:
     """Write a scale ticket for one module."""
-    book = session.book()
     day = read_date(on_text, session.season.start)
     if not session.season.contains(day):
         raise ValidationError("on", f"{day} is outside {session.season}")
-    with book.transaction() as conn:
-        tickets = TicketRepository(conn)
+    with session.writing(make=True) as repos:
+        tickets = repos.tickets
         held = tickets.book(session.season)
         number = tickets.next_number(session.season)
         written = ModuleTicket(
@@ -78,9 +75,8 @@ def weigh(
 @click.pass_obj
 def correct(session: Session, number: int, gross: str, tare: str) -> None:
     """Void a ticket by writing the corrected one."""
-    book = session.require_book()
-    with book.transaction() as conn:
-        tickets = TicketRepository(conn)
+    with session.writing() as repos:
+        tickets = repos.tickets
         wrong = tickets.get(session.season, number)
         replacement = ModuleTicket(
             number=tickets.next_number(session.season),
@@ -106,8 +102,7 @@ def correct(session: Session, number: int, gross: str, tare: str) -> None:
 @click.pass_obj
 def list_tickets(session: Session, producer: str | None) -> None:
     """Every live ticket this season."""
-    book = session.require_book()
-    held = TicketRepository(book.connection).book(session.season)
+    held = session.open_repos().tickets.book(session.season)
     rows = [
         [
             str(one.number),
@@ -132,8 +127,7 @@ def list_tickets(session: Session, producer: str | None) -> None:
 @click.pass_obj
 def show_ticket(session: Session, number: int) -> None:
     """One ticket, with what it weighed and whether it still counts."""
-    book = session.require_book()
-    tickets = TicketRepository(book.connection)
+    tickets = session.open_repos().tickets
     one = tickets.get(session.season, number)
     held = tickets.book(session.season)
     click.echo(
@@ -160,11 +154,10 @@ def show_ticket(session: Session, number: int) -> None:
 @click.pass_obj
 def yard(session: Session, as_of: str | None) -> None:
     """What is still in the yard, worst first."""
-    book = session.require_book()
     when = read_date(as_of, date.today())
-    tickets = TicketRepository(book.connection)
-    held = tickets.book(session.season)
-    ginned = LotRepository(book.connection).assigned_tickets(session.season)
+    repos = session.open_repos()
+    held = repos.tickets.book(session.season)
+    ginned = repos.lots.assigned_tickets(session.season)
     standing = ModuleYard()
     for one in held.live():
         standing.receive(one)
@@ -240,12 +233,11 @@ TICKET_COLUMNS = ("module", "producer", "farm", "gross", "tare", "moisture", "we
 @click.pass_obj
 def import_tickets(session: Session, path: Path) -> None:
     """Load scale tickets out of the weighbridge export."""
-    book = session.book()
     rows = read_rows(path.read_text(encoding="utf-8"), list(TICKET_COLUMNS))
     written = 0
     skipped: list[str] = []
-    with book.transaction() as conn:
-        tickets = TicketRepository(conn)
+    with session.writing(make=True) as repos:
+        tickets = repos.tickets
         held = tickets.book(session.season)
         for row in rows:
             module = field(row, "module")

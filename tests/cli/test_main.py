@@ -169,3 +169,73 @@ def test_verify_reads_the_book_it_is_given(runner, tmp_path):
 def test_verify_fails_on_a_book_that_is_not_there(runner, tmp_path):
     result = runner.invoke(main, ["--book", str(tmp_path / "none.sqlite3"), "verify"])
     assert result.exit_code != 0
+
+
+def test_a_write_that_raises_leaves_nothing_behind(runner, tmp_path):
+    path = tmp_path / "season.sqlite3"
+    base = ["--book", str(path), "--season", "2025"]
+    runner.invoke(main, [*base, "producer", "add", "BLYTHE", "Blythe Farms"])
+    runner.invoke(
+        main,
+        [
+            *base,
+            "ticket",
+            "weigh",
+            "HW-004181",
+            "BLYTHE",
+            "3312",
+            "38400",
+            "17200",
+            "--on",
+            "2025-10-14",
+        ],
+    )
+    failed = runner.invoke(
+        main,
+        [
+            *base,
+            "ticket",
+            "weigh",
+            "HW-004181",
+            "BLYTHE",
+            "3312",
+            "38400",
+            "17200",
+            "--on",
+            "2025-10-14",
+        ],
+    )
+    assert failed.exit_code != 0
+    listed = runner.invoke(main, [*base, "ticket", "list"])
+    assert listed.output.count("HW-004181") == 1
+    trail = runner.invoke(main, [*base, "audit", "list"])
+    assert trail.output.count("weigh") == 1
+
+
+def test_a_write_command_makes_the_book_when_it_has_to(runner, tmp_path):
+    path = tmp_path / "season.sqlite3"
+    result = runner.invoke(
+        main, ["--book", str(path), "producer", "add", "BLYTHE", "Blythe Farms"]
+    )
+    assert result.exit_code == 0
+    assert path.exists()
+
+
+def test_a_write_command_that_needs_a_book_says_so(runner, tmp_path):
+    result = runner.invoke(
+        main,
+        [
+            "--book",
+            str(tmp_path / "none.sqlite3"),
+            "--season",
+            "2025",
+            "lot",
+            "gin",
+            "1",
+            "--lint",
+            "100",
+            "--seed",
+            "100",
+        ],
+    )
+    assert result.exit_code != 0

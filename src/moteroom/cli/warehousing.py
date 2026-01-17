@@ -12,9 +12,6 @@ from moteroom.cli.output import render_pairs, render_table
 from moteroom.core.errors import ValidationError
 from moteroom.core.ids import BaleId
 from moteroom.core.weight import total
-from moteroom.storage.lots import BaleRepository
-from moteroom.storage.settings import SettingsRepository
-from moteroom.storage.warehouse import OrderRepository, ReceiptRepository
 from moteroom.warehouse.ewr import parse_acknowledgement, render_transfer, transfer_weight
 from moteroom.warehouse.movement import arrive, send
 from moteroom.warehouse.receipt import Receipt
@@ -44,10 +41,9 @@ def issue(
     on_text: str | None,
 ) -> None:
     """Take a bale into store."""
-    book = session.require_book()
-    with book.transaction() as conn:
-        warehouse = house or SettingsRepository(conn).get("warehouse")
-        one = BaleRepository(conn).get(BaleId.parse(bale_id))
+    with session.writing() as repos:
+        warehouse = house or repos.settings.get("warehouse")
+        one = repos.bales.get(BaleId.parse(bale_id))
         written = Receipt(
             number=number.strip().upper(),
             warehouse=warehouse.strip().upper(),
@@ -57,7 +53,7 @@ def issue(
             holder=holder.strip().upper(),
             electronic=not paper,
         )
-        ReceiptRepository(conn).issue(written)
+        repos.receipts.issue(written)
     click.echo(f"receipt {written.number} for {written.bale_id} at {written.warehouse}")
 
 
@@ -68,9 +64,8 @@ def issue(
 @click.pass_obj
 def release(session: Session, number: str, to: str, on_text: str | None) -> None:
     """Release a receipt to whoever takes the bale."""
-    book = session.require_book()
-    with book.transaction() as conn:
-        released = ReceiptRepository(conn).release(
+    with session.writing() as repos:
+        released = repos.receipts.release(
             number.strip().upper(),
             read_date(on_text, session.season.end),
             to.strip().upper(),
@@ -83,8 +78,7 @@ def release(session: Session, number: str, to: str, on_text: str | None) -> None
 @click.pass_obj
 def list_receipts(session: Session, house: str | None) -> None:
     """Receipts still outstanding."""
-    book = session.require_book()
-    held = ReceiptRepository(book.connection).outstanding(house)
+    held = session.open_repos().receipts.outstanding(house)
     rows = [
         [
             one.number,
@@ -130,9 +124,8 @@ def write_order(
     """Write an order against receipts that are still outstanding."""
     if not receipts:
         raise ValidationError("receipts", "an order has to name a bale")
-    book = session.require_book()
-    with book.transaction() as conn:
-        warehouse = (house or SettingsRepository(conn).get("warehouse")).strip().upper()
+    with session.writing() as repos:
+        warehouse = (house or repos.settings.get("warehouse")).strip().upper()
         written = ShippingOrder(
             number=number.strip().upper(),
             warehouse=warehouse,
@@ -140,9 +133,9 @@ def write_order(
             buyer=buyer.strip().upper(),
             receipts=tuple(one.strip().upper() for one in receipts),
         )
-        held = ReceiptRepository(conn)
+        held = repos.receipts
         picked = check_against(written, held.outstanding(warehouse))
-        OrderRepository(conn).add(written)
+        repos.orders.add(written)
     loads = plan_loads(picked)
     click.echo(f"order {written.number} {written.count} bales in {len(loads)} loads")
 
@@ -152,9 +145,8 @@ def write_order(
 @click.pass_obj
 def show_order(session: Session, number: str) -> None:
     """One order and the loads it makes."""
-    book = session.require_book()
-    found = OrderRepository(book.connection).get(number.strip().upper())
-    receipts = ReceiptRepository(book.connection)
+    found = session.open_repos().orders.get(number.strip().upper())
+    receipts = session.open_repos().receipts
     picked = [receipts.get(one) for one in found.receipts]
     loads = plan_loads(picked)
     click.echo(
@@ -188,8 +180,7 @@ def transfer(
     on_text: str | None,
 ) -> None:
     """Write an electronic transfer for receipts still in store."""
-    book = session.require_book()
-    receipts = ReceiptRepository(book.connection)
+    receipts = session.open_repos().receipts
     picked = (
         [receipts.get(number.strip().upper()) for number in numbers]
         if numbers
@@ -210,7 +201,6 @@ def transfer(
 @click.pass_obj
 def acknowledge(session: Session, path: Path, to: str | None, on_text: str | None) -> None:
     """Read the provider's answer and release what it accepted."""
-    book = session.require_book()
     answer = parse_acknowledgement(path.read_text(encoding="utf-8"))
     click.echo(f"{answer.provider} on {answer.answered_on.isoformat()}: {answer}")
     for number, reason in answer.rejected:
@@ -218,8 +208,8 @@ def acknowledge(session: Session, path: Path, to: str | None, on_text: str | Non
     if to is None:
         return
     when = read_date(on_text, session.season.end)
-    with book.transaction() as conn:
-        held = ReceiptRepository(conn)
+    with session.writing() as repos:
+        held = repos.receipts
         for number in answer.accepted:
             held.release(number, when, to.strip().upper())
     click.echo(f"released {len(answer.accepted)} receipts to {to.strip().upper()}")
@@ -243,10 +233,9 @@ def move(
     arrived: str | None = None,
 ) -> None:
     """Move a bale to another warehouse, which is two receipts and a gap."""
-    book = session.require_book()
     left_on = read_date(on_text, session.season.end)
-    with book.transaction() as conn:
-        receipts = ReceiptRepository(conn)
+    with session.writing() as repos:
+        receipts = repos.receipts
         held = receipts.get(number.strip().upper())
         movement = send(held, house, left_on)
         receipts.release(held.number, left_on, movement.arrived)

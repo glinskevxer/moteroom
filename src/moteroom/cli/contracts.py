@@ -11,9 +11,6 @@ from moteroom.core.errors import ValidationError
 from moteroom.core.ids import BaleId
 from moteroom.core.money import CentsPerPound
 from moteroom.settlement.contract import Contract, delivered_price, fill_of
-from moteroom.storage.cards import CardRepository
-from moteroom.storage.contracts import ContractRepository
-from moteroom.storage.lots import BaleRepository
 
 
 def build_contract(
@@ -61,10 +58,9 @@ def price_delivery(
     futures: str | None,
 ) -> None:
     """What one classed bale is paid against a contract."""
-    book = session.require_book()
     tag = BaleId.parse(bale_id)
-    one = BaleRepository(book.connection).get(tag)
-    card = CardRepository(book.connection).get(tag)
+    one = session.open_repos().bales.get(tag)
+    card = session.open_repos().cards.get(tag)
     made = build_contract("C000001", "BUYER", 1, None, None, None, price, basis, session)
     against = CentsPerPound.parse(futures) if futures else None
     rate = delivered_price(made, card, against)
@@ -115,10 +111,9 @@ def write_contract(
     closes: str | None,
 ) -> None:
     """Put a contract on the book."""
-    book = session.book()
     made = build_contract(number, buyer, bales, signed, opens, closes, price, basis, session)
-    with book.transaction() as conn:
-        ContractRepository(conn).add(made, session.season)
+    with session.writing() as repos:
+        repos.contracts.add(made, session.season)
     click.echo(str(made))
 
 
@@ -132,19 +127,18 @@ def deliver(
     session: Session, number: str, bale_id: str, futures: str | None, on_text: str | None
 ) -> None:
     """Deliver one classed bale against a contract."""
-    book = session.require_book()
     tag = BaleId.parse(bale_id)
     when = read_date(on_text, session.season.end)
-    with book.transaction() as conn:
-        contracts = ContractRepository(conn)
+    with session.writing() as repos:
+        contracts = repos.contracts
         made = contracts.get(number.strip().upper())
         if not made.covers(when):
             raise ValidationError("on", f"{when} is outside the delivery window")
-        card = CardRepository(conn).get(tag)
+        card = repos.cards.get(tag)
         against = CentsPerPound.parse(futures) if futures else None
         rate = delivered_price(made, card, against)
         contracts.deliver(made.number, tag, when, rate)
-        one = BaleRepository(conn).get(tag)
+        one = repos.bales.get(tag)
     click.echo(f"{tag} delivered at {rate}, {rate.on(one.net)}")
 
 
@@ -152,8 +146,7 @@ def deliver(
 @click.pass_obj
 def list_contracts(session: Session) -> None:
     """Every contract this season and how much of it is left."""
-    book = session.require_book()
-    contracts = ContractRepository(book.connection)
+    contracts = session.open_repos().contracts
     rows = []
     for made in contracts.for_season(session.season):
         filled = contracts.fill(made.number)

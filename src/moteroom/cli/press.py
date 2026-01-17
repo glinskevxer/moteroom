@@ -20,8 +20,6 @@ from moteroom.core.money import CentsPerPound
 from moteroom.core.weight import Weight, total
 from moteroom.press.restoration import Restoration
 from moteroom.receiving.ticket import clean_moisture
-from moteroom.storage.lots import BaleRepository, LotRepository
-from moteroom.storage.settings import SettingsRepository
 
 
 @click.group()
@@ -45,15 +43,14 @@ def press_bale(
     on_text: str | None,
 ) -> None:
     """Press one bale off a lot."""
-    book = session.require_book()
     target = LotId(session.season, lot)
-    with book.transaction() as conn:
-        gin = SettingsRepository(conn).gin_code()
-        lots = LotRepository(conn)
+    with session.writing() as repos:
+        gin = repos.settings.gin_code()
+        lots = repos.lots
         lots.get(target)
         if lots.is_closed(target):
             raise ConflictError("lot", str(target), "is closed")
-        bales = BaleRepository(conn)
+        bales = repos.bales
         counter = bales.press(session.season, gin)
         pressed = counter.press(
             target,
@@ -72,8 +69,7 @@ def press_bale(
 @click.pass_obj
 def list_bales(session: Session, lot: int | None) -> None:
     """Bales pressed this season."""
-    book = session.require_book()
-    bales = BaleRepository(book.connection)
+    bales = session.open_repos().bales
     held = (
         bales.for_lot(LotId(session.season, lot))
         if lot is not None
@@ -102,8 +98,7 @@ def show_bale(session: Session, bale_id: str) -> None:
     """One bale off its tag."""
     from moteroom.core.ids import BaleId
 
-    book = session.require_book()
-    one = BaleRepository(book.connection).get(BaleId.parse(bale_id))
+    one = session.open_repos().bales.get(BaleId.parse(bale_id))
     click.echo(
         render_pairs(
             [

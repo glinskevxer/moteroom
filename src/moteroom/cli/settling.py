@@ -21,10 +21,7 @@ from moteroom.settlement.cheque import Cheque
 from moteroom.settlement.equity import allocate_margin
 from moteroom.settlement.statement import Advance, Statement
 from moteroom.settlement.terms import Terms
-from moteroom.storage.cheques import ChequeRepository
-from moteroom.storage.rates import RatesRepository, default_terms
-from moteroom.storage.registry import Repositories
-from moteroom.storage.settlement import AdvanceRepository, StatementRepository
+from moteroom.storage.rates import default_terms
 
 
 def posted_terms(session: Session) -> Terms:
@@ -57,12 +54,11 @@ def settle() -> None:
 @click.pass_obj
 def post_rates(session: Session, show: bool) -> None:
     """Post this season's rates, or read the posted ones back."""
-    book = session.book()
     if show:
         click.echo(render_pairs(session.repos().rates.lines(session.season)))
         return
-    with book.transaction() as conn:
-        RatesRepository(conn).post(session.season, default_terms(), date.today())
+    with session.writing(True) as repos:
+        repos.rates.post(session.season, default_terms(), date.today())
     click.echo(f"rates posted for {session.season}")
 
 
@@ -76,9 +72,8 @@ def advance(
     session: Session, producer: str, reference: str, amount: str, on_text: str | None
 ) -> None:
     """Record money paid out before the settlement."""
-    book = session.require_book()
-    with book.transaction() as conn:
-        AdvanceRepository(conn).add(
+    with session.writing() as repos:
+        repos.advances.add(
             session.season,
             producer.strip().upper(),
             Advance(reference.strip().upper(), Money.parse(amount)),
@@ -92,9 +87,7 @@ def advance(
 @click.pass_obj
 def preview(session: Session, producer: str) -> None:
     """Work a producer's settlement out without writing it down."""
-    book = session.require_book()
-    terms = posted_terms(session)
-    service = SettlementService(book, terms)
+    service = SettlementService(session.require_book(), posted_terms(session))
     code = producer.strip().upper()
     made = service.build(session.season, code)
     click.echo(render_pairs(statement_lines(made)))
@@ -130,9 +123,9 @@ def run_settlement(session: Session, producer: str, on_text: str | None) -> None
     book = session.require_book()
     terms = posted_terms(session)
     code = producer.strip().upper()
-    with book.transaction() as conn:
+    with session.writing() as repos:
         made = SettlementService(book, terms).build(session.season, code)
-        StatementRepository(conn).save(made, read_date(on_text, session.season.end))
+        repos.statements.save(made, read_date(on_text, session.season.end))
         session.record("settle", code, f"{made.bales} bales, net {made.net}")
     verdict = "due" if made.is_payable else "owing"
     click.echo(f"{code} settled, {made.net} {verdict}")
@@ -203,11 +196,9 @@ def write_cheque(
     session: Session, producer: str, amount: str | None, number: str | None, on_text: str | None
 ) -> None:
     """Write a cheque against a settlement already run."""
-    book = session.require_book()
     code = producer.strip().upper()
     when = read_date(on_text, session.season.end)
-    with book.transaction() as conn:
-        repos = Repositories(conn)
+    with session.writing() as repos:
         register = repos.cheques.register(session.season)
         due = Money.parse(amount) if amount else repos.statements.get(session.season, code).net
         made = Cheque(
@@ -230,10 +221,9 @@ def clear_cheque(
     session: Session, number: str, on_text: str | None, reason: str | None
 ) -> None:
     """Mark a cheque cleared, or void it."""
-    book = session.require_book()
     when = read_date(on_text, session.season.end)
-    with book.transaction() as conn:
-        cheques = ChequeRepository(conn)
+    with session.writing() as repos:
+        cheques = repos.cheques
         made = cheques.void(number, when, reason) if reason else cheques.clear(number, when)
     click.echo(str(made))
 
