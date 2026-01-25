@@ -9,7 +9,7 @@ nothing.
 from __future__ import annotations
 
 import sqlite3
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import date
 from decimal import Decimal
 
@@ -33,6 +33,29 @@ class CardRepository(Repository):
 
     def add(self, card: ClassingRecord) -> None:
         self._insert(card)
+
+    def add_all(self, cards: Sequence[ClassingRecord]) -> int:
+        """File a whole transfer at once.
+
+        The office sends four hundred cards in a file and inserting them one
+        statement at a time is four hundred round trips through sqlite for no
+        reason. They go in as two statements inside one savepoint, so a file
+        that fails partway leaves nothing behind.
+        """
+        if not cards:
+            return 0
+        with self.atomic():
+            self.write_many(
+                f"INSERT INTO cards ({COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                [_row(card) for card in cards],
+                lambda: ConflictError("cards", str(len(cards)), "will not go in the book"),
+            )
+            self.write_many(
+                "INSERT INTO card_extraneous (bale_id, code) VALUES (?, ?)",
+                [(str(card.bale_id), code) for card in cards for code in card.codes],
+                lambda: ConflictError("cards", str(len(cards)), "carry a finding twice"),
+            )
+        return len(cards)
 
     def replace(self, card: ClassingRecord) -> None:
         """Take a corrected card, findings and all."""
@@ -129,3 +152,19 @@ class CardRepository(Repository):
 def _refusing(card: ClassingRecord) -> Callable[[], Exception]:
     """The error a card that will not go in the book comes back as."""
     return lambda: ConflictError("card", str(card.bale_id), "will not go in the book")
+
+
+def _row(card: ClassingRecord) -> tuple[object, ...]:
+    """One card as the columns take it."""
+    return (
+        str(card.bale_id),
+        card.classed_on.isoformat(),
+        card.office,
+        str(card.micronaire.reading),
+        card.staple.thirty_seconds,
+        str(card.strength.grams_per_tex),
+        str(card.uniformity.percent),
+        card.color.code,
+        card.leaf.grade,
+        str(card.trash.percent),
+    )

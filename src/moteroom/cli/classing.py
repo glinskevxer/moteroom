@@ -32,22 +32,20 @@ def card() -> None:
 def load_cards(session: Session, path: Path) -> None:
     """Load a classing transfer file."""
     transfer = parse_file(path.read_text(encoding="utf-8"))
-    loaded = 0
     skipped: list[tuple[str, str]] = []
     with session.writing() as repos:
-        cards = repos.cards
-        bales = repos.bales
-        known = {str(one.bale_id) for one in bales.for_season(session.season)}
+        known = {str(one.bale_id) for one in repos.bales.for_season(session.season)}
+        filing = []
         for record in transfer.records:
             key = str(record.bale_id)
             if key not in known:
                 skipped.append((key, "no such bale here"))
                 continue
-            if cards.has(record.bale_id):
+            if repos.cards.has(record.bale_id):
                 skipped.append((key, "already classed"))
                 continue
-            cards.add(record)
-            loaded += 1
+            filing.append(record)
+        loaded = repos.cards.add_all(filing)
     click.echo(f"loaded {loaded} of {transfer.declared} from {transfer.office}")
     for reject in transfer.rejects:
         click.echo(f"  rejected {reject}")

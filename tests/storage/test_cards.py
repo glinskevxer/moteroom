@@ -148,3 +148,24 @@ def test_a_refused_card_names_the_bale(cards):
     with pytest.raises(ConflictError) as caught:
         cards.add(card(1))
     assert caught.value.key == str(BaleId.build(SEASON, GIN, 1))
+
+
+def test_a_whole_transfer_files_at_once(cards):
+    assert cards.add_all([card(1), card(2)]) == 2
+    assert len(cards.for_season(SEASON)) == 2
+
+
+def test_filing_nothing_is_not_an_error(cards):
+    assert cards.add_all([]) == 0
+
+
+def test_a_transfer_with_one_bad_card_files_none_of_it(cards):
+    with pytest.raises(ConflictError):
+        cards.add_all([card(1), card(9)])
+    assert cards.for_season(SEASON) == []
+
+
+def test_a_filed_transfer_keeps_its_findings(cards):
+    cards.add_all([card(1, extraneous=(Extraneous.parse("B2"),)), card(2)])
+    assert cards.get(BaleId.build(SEASON, GIN, 1)).codes == ("B2",)
+    assert cards.get(BaleId.build(SEASON, GIN, 2)).codes == ()
