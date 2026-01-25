@@ -74,6 +74,7 @@ the drift between the two, and it closes up as the rest of the bales come off.
     src/moteroom/reporting/   the reports, as data rather than as text
     src/moteroom/cli/         the command tree
     src/moteroom/tools/       the gates CI runs against the repository itself
+    docs/GLOSSARY.md          the gin's own words, generated from the code
     tests/                    the test suite
 
 ## Running the checks
