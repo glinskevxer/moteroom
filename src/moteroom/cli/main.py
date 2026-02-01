@@ -30,6 +30,7 @@ from moteroom.cli.warehousing import order, receipt
 from moteroom.core.errors import MoteroomError
 from moteroom.service import closing
 from moteroom.storage.backup import backup, verify
+from moteroom.storage.maintenance import compact, measure, table_sizes
 from moteroom.storage.migrations import LATEST
 
 
@@ -116,6 +117,32 @@ def verify_book(session: Session, target: Path | None) -> None:
     click.echo(str(verdict))
     if not verdict.is_sound:
         raise SystemExit(1)
+
+
+@main.command("compact")
+@click.pass_obj
+def compact_book(session: Session) -> None:
+    """Hand back the pages a season's deletions left behind."""
+    book = session.require_book()
+    before, after = compact(book, session.book_path)
+    click.echo(f"before  {before}")
+    click.echo(f"after   {after}")
+    click.echo(f"saved   {before.bytes - after.bytes} bytes")
+
+
+@main.command("size")
+@click.pass_obj
+def show_size(session: Session) -> None:
+    """How big the book is and which tables it went into."""
+    book = session.require_book()
+    size = measure(book, session.book_path)
+    click.echo(str(size))
+    if size.worth_compacting:
+        click.echo("worth compacting")
+    click.echo()
+    for table, rows in table_sizes(book).items():
+        if rows:
+            click.echo(f"  {table:<16} {rows}")
 
 
 @main.command("close")

@@ -239,3 +239,28 @@ def test_a_write_command_that_needs_a_book_says_so(runner, tmp_path):
         ],
     )
     assert result.exit_code != 0
+
+
+def test_the_size_command_reads_the_book(runner, tmp_path):
+    path = tmp_path / "season.sqlite3"
+    base = ["--book", str(path), "--season", "2025"]
+    runner.invoke(main, [*base, "producer", "add", "BLYTHE", "Blythe Farms"])
+    result = runner.invoke(main, [*base, "size"])
+    assert result.exit_code == 0
+    assert "pages free" in result.output
+    assert "producers" in result.output
+
+
+def test_compacting_says_what_it_saved(runner, tmp_path):
+    path = tmp_path / "season.sqlite3"
+    base = ["--book", str(path), "--season", "2025"]
+    runner.invoke(main, [*base, "init"])
+    result = runner.invoke(main, [*base, "compact"])
+    assert result.exit_code == 0
+    assert "before" in result.output
+    assert "saved" in result.output
+
+
+def test_size_on_a_book_that_is_not_there(runner, tmp_path):
+    result = runner.invoke(main, ["--book", str(tmp_path / "none.sqlite3"), "size"])
+    assert result.exit_code != 0
