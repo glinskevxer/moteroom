@@ -69,3 +69,22 @@ def test_the_farm_count_shows_in_the_list(run):
     run("producer", "farm", "BLYTHE", "3312", "1141", "120.25")
     listed = run("producer", "list")
     assert listed.output.strip().endswith("2")
+
+
+def test_a_producer_season_reads_off_the_book(run):
+    run("setting", "set", "gin_code", "41207")
+    run("producer", "add", "BLYTHE", "Blythe Farms")
+    run(
+        "ticket", "weigh", "HW-004181", "BLYTHE", "3312", "38400", "17200", "--on", "2025-10-14"
+    )
+    run("lot", "gin", "1", "--lint", "7400", "--seed", "11800", "--motes", "1300")
+    shown = run("producer", "season", "blythe")
+    assert shown.exit_code == 0
+    assert "21,200 lb" in shown.output
+    assert "plant turnout" in shown.output
+    assert "not yet" in shown.output
+
+
+def test_a_producer_season_for_somebody_nobody_added(run):
+    run("producer", "add", "BLYTHE", "Blythe Farms")
+    assert run("producer", "season", "MERRITT").exit_code != 0

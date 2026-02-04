@@ -10,6 +10,7 @@ from moteroom.cli.context import Session
 from moteroom.cli.output import render_pairs, render_table
 from moteroom.core.errors import ValidationError
 from moteroom.receiving.party import Farm, Producer
+from moteroom.service.producer import standing
 
 
 @click.group()
@@ -80,3 +81,13 @@ def add_farm(session: Session, code: str, number: str, tract: str, acres: str) -
     with session.writing(True) as repos:
         repos.farms.add(Farm(number.strip(), tract.strip(), code.strip().upper(), measured))
     click.echo(f"added farm {number}-{tract} to {code.strip().upper()}")
+
+
+@producer.command("season")
+@click.argument("code")
+@click.pass_obj
+def show_season(session: Session, code: str) -> None:
+    """One grower's whole season, and how it sits against the plant."""
+    book = session.require_book()
+    grower = session.open_repos().producers.get(code.strip().upper())
+    click.echo(render_pairs(standing(book, session.season, grower.code).lines()))
