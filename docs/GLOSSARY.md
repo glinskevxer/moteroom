@@ -18,6 +18,7 @@ Generated from the classes that define these words. Run
 | `ByproductLedger` | `ginning.byproduct` | Every load sold this season. |
 | `CentsPerPound` | `core.money` | A price in cents per pound, carried to a hundredth of a cent. |
 | `Certificate` | `receiving.scale` | One certification of one scale, by whoever tested it. |
+| `Charge` | `receiving.freight` | What a load came to, and which of the three rates decided it. |
 | `Charge` | `warehouse.storage` | What one bale owes the warehouse, split the way the invoice prints. |
 | `ChargeSchedule` | `settlement.charges` | The plant's posted charges for a season. |
 | `Cheque` | `settlement.cheque` | One cheque as the register holds it. |
@@ -31,9 +32,11 @@ Generated from the classes that define these words. Run
 | `Extraneous` | `classing.defect` | One finding: what it was and how much of it. |
 | `Farm` | `receiving.party` | An FSA farm and tract, which is how acreage is reported. |
 | `Fill` | `settlement.contract` | How much of a contract has been delivered. |
+| `FreightLedger` | `receiving.freight` | Every load hauled in this season. |
 | `GinBill` | `settlement.charges` | The charges on one producer's cotton, kept as the lines that print. |
 | `GinCode` | `core.ids` | The five digit code the plant gins under. |
 | `GinRun` | `ginning.run` | One lot: what went in, what came out and what the mote room caught. |
+| `Haul` | `receiving.freight` | One truckload of modules. |
 | `Holding` | `settlement.equity` | Equity allocated in one season and still standing. |
 | `IneligibleError` | `loan.value` | A bale the loan will not take at any rate. |
 | `LeafGrade` | `classing.defect` | A leaf grade of one through seven, or eight for below grade. |
@@ -53,6 +56,7 @@ Generated from the classes that define these words. Run
 | `Pool` | `loan.pool` | Every bale that could be priced, and the ones that could not. |
 | `PoolLine` | `loan.pool` | One bale in the pool, priced. |
 | `Producer` | `receiving.party` | A grower the gin writes cheques to. |
+| `Rate` | `receiving.freight` | What one hauler charges. |
 | `RateBreakdown` | `loan.value` | Every line that moved the rate, in the order the office reads them. |
 | `Receipt` | `warehouse.receipt` | One bale in store, and who holds the paper on it. |
 | `ReceiptRegister` | `warehouse.register` | Every receipt this house has issued, outstanding or not. |

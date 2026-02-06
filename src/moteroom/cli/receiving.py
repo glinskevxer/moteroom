@@ -14,7 +14,9 @@ from moteroom.cli.output import render_pairs, render_table
 from moteroom.core.csvio import field, read_rows, write_rows
 from moteroom.core.errors import MoteroomError, ValidationError
 from moteroom.core.ids import ModuleId
+from moteroom.core.money import Money
 from moteroom.core.weight import Weight
+from moteroom.receiving.freight import FreightLedger, Haul, Rate
 from moteroom.receiving.scale import Certificate, ScaleBook
 from moteroom.receiving.ticket import ModuleTicket, clean_moisture
 from moteroom.receiving.yard import ModuleYard
@@ -288,3 +290,51 @@ def export_tickets(session: Session, out_path: str | None) -> None:
         click.echo(f"{len(rows)} tickets written to {out_path}")
         return
     click.echo(text, nl=False)
+
+
+@ticket.command("freight")
+@click.argument("hauler")
+@click.argument("tickets")
+@click.argument("miles", type=int)
+@click.option("--per-module", default="42.00", show_default=True, help="Rate for each module.")
+@click.option("--per-mile", default="3.10", show_default=True, help="Rate for each mile.")
+@click.option("--minimum", default="250.00", show_default=True, help="Floor under the load.")
+@on_option("Haul date")
+@click.pass_obj
+def freight(
+    session: Session,
+    hauler: str,
+    tickets: str,
+    miles: int,
+    per_module: str,
+    per_mile: str,
+    minimum: str,
+    on_text: str | None,
+) -> None:
+    """Price a truckload of modules and share it over them."""
+    numbers = tuple(int(part) for part in tickets.split(",") if part.strip().isdigit())
+    if not numbers:
+        raise ValidationError("tickets", "a load has to carry something")
+    ledger = FreightLedger(
+        [
+            Rate(
+                hauler=hauler.strip().upper(),
+                per_module=Money.parse(per_module),
+                per_mile=Money.parse(per_mile),
+                minimum=Money.parse(minimum),
+            )
+        ]
+    )
+    load = Haul(
+        hauler=hauler.strip().upper(),
+        hauled_on=read_date(on_text, session.season.start),
+        tickets=numbers,
+        miles=miles,
+    )
+    charge = ledger.haul(load)
+    rows = [
+        [str(ticket), str(amount)] for ticket, amount in sorted(ledger.per_ticket().items())
+    ]
+    click.echo(f"{load} for {charge}")
+    click.echo()
+    click.echo(render_table(["ticket", "freight"], rows, right=(1,)))
