@@ -7,12 +7,14 @@ from pathlib import Path
 import click
 
 from moteroom.cli.context import Session
-from moteroom.cli.options import on_option, read_date
+from moteroom.cli.options import as_of_option, on_option, read_date
 from moteroom.cli.output import render_pairs, render_table
 from moteroom.core.errors import ValidationError
 from moteroom.core.ids import BaleId
+from moteroom.core.money import CentsPerPound, Money
 from moteroom.core.weight import total
 from moteroom.warehouse.ewr import parse_acknowledgement, render_transfer, transfer_weight
+from moteroom.warehouse.insurance import Policy, exposure
 from moteroom.warehouse.movement import arrive, send
 from moteroom.warehouse.receipt import Receipt
 from moteroom.warehouse.shipping import ShippingOrder, check_against, plan_loads
@@ -250,3 +252,40 @@ def move(
             movement = closed
         session.record("move", str(movement.bale_id), f"{movement.left} to {movement.arrived}")
     click.echo(str(movement))
+
+
+@receipt.command("cover")
+@click.argument("insurer")
+@click.argument("number")
+@click.option("--per-bale", default="350.00", show_default=True, help="Declared value a bale.")
+@click.option("--limit", required=True, help="What the policy pays at most.")
+@click.option("--deductible", default="0.00", show_default=True, help="What comes off a claim.")
+@click.option("--price", default="68.50", show_default=True, help="Lint price, in cents.")
+@as_of_option("Cover date")
+@click.pass_obj
+def cover(
+    session: Session,
+    insurer: str,
+    number: str,
+    per_bale: str,
+    limit: str,
+    deductible: str,
+    price: str,
+    as_of: str | None,
+) -> None:
+    """Work out the gap between what is in store and what a policy would pay."""
+    when = read_date(as_of, session.season.end)
+    made = Policy(
+        insurer=insurer.strip().upper(),
+        number=number.strip().upper(),
+        per_bale=Money.parse(per_bale),
+        limit=Money.parse(limit),
+        starts_on=session.season.start,
+        ends_on=session.season.end,
+        deductible=Money.parse(deductible),
+    )
+    held = session.open_repos().receipts.outstanding()
+    found = exposure(held, made, CentsPerPound.parse(price), when)
+    click.echo(render_pairs(found.lines()))
+    click.echo()
+    click.echo(str(found))

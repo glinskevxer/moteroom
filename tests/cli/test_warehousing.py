@@ -226,3 +226,48 @@ def test_a_bale_does_not_move_to_the_house_it_is_in(stored):
         ).exit_code
         != 0
     )
+
+
+def test_the_cover_report_finds_the_gap(stored):
+    issue(stored, 1, on="2025-10-20")
+    made = stored(
+        "receipt",
+        "cover",
+        "delta mutual",
+        "p-4471",
+        "--limit",
+        "700.00",
+        "--as-of",
+        "2025-12-01",
+    )
+    assert made.exit_code == 0
+    assert "would pay" in made.output
+    assert "1 bales" in made.output
+
+
+def test_a_generous_policy_covers_the_store(stored):
+    issue(stored, 1, on="2025-10-20")
+    made = stored(
+        "receipt",
+        "cover",
+        "DELTA",
+        "P-1",
+        "--per-bale",
+        "500.00",
+        "--limit",
+        "5000.00",
+        "--as-of",
+        "2025-12-01",
+    )
+    assert "covered" in made.output
+
+
+def test_a_policy_with_no_limit_is_refused(stored):
+    assert stored("receipt", "cover", "DELTA", "P-1", "--limit", "0.00").exit_code != 0
+
+
+def test_the_cover_report_on_an_empty_store(stored):
+    made = stored(
+        "receipt", "cover", "DELTA", "P-1", "--limit", "700.00", "--as-of", "2025-12-01"
+    )
+    assert "0 bales covered" in made.output

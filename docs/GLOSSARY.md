@@ -31,6 +31,7 @@ Generated from the classes that define these words. Run
 | `ConflictError` | `core.errors` | A write would contradict something the book already holds. |
 | `Contract` | `settlement.contract` | One promise to deliver bales inside a window. |
 | `EquityLedger` | `settlement.equity` | Equity by member and by year, and the fund that revolves it out. |
+| `Exposure` | `warehouse.insurance` | What is in store, what it is worth, and what the policy would pay. |
 | `Extraneous` | `classing.defect` | One finding: what it was and how much of it. |
 | `Farm` | `receiving.party` | An FSA farm and tract, which is how acreage is reported. |
 | `Fill` | `settlement.contract` | How much of a contract has been delivered. |
@@ -55,6 +56,7 @@ Generated from the classes that define these words. Run
 | `Movement` | `warehouse.movement` | One bale leaving one house for another. |
 | `NotFoundError` | `core.errors` | A record was asked for by key and the book does not hold it. |
 | `Patronage` | `settlement.equity` | One member's share of a season's margin. |
+| `Policy` | `warehouse.insurance` | One policy over bales in store. |
 | `Pool` | `loan.pool` | Every bale that could be priced, and the ones that could not. |
 | `PoolLine` | `loan.pool` | One bale in the pool, priced. |
 | `Producer` | `receiving.party` | A grower the gin writes cheques to. |
