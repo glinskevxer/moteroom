@@ -16,11 +16,13 @@ Generated from the classes that define these words. Run
 | `Band` | `loan.schedule` | One row of a table: a closed range and what it does to the rate. |
 | `BandTable` | `loan.schedule` | A column of the schedule, checked for gaps when it is built. |
 | `ByproductLedger` | `ginning.byproduct` | Every load sold this season. |
+| `CalibrationLog` | `classing.calibration` | Every check run on the line. |
 | `CentsPerPound` | `core.money` | A price in cents per pound, carried to a hundredth of a cent. |
 | `Certificate` | `receiving.scale` | One certification of one scale, by whoever tested it. |
 | `Charge` | `receiving.freight` | What a load came to, and which of the three rates decided it. |
 | `Charge` | `warehouse.storage` | What one bale owes the warehouse, split the way the invoice prints. |
 | `ChargeSchedule` | `settlement.charges` | The plant's posted charges for a season. |
+| `Check` | `classing.calibration` | One run of the standard through the line. |
 | `Cheque` | `settlement.cheque` | One cheque as the register holds it. |
 | `ClassingBook` | `classing.book` | Every card back this season, keyed by bale. |
 | `ClassingFile` | `classing.transfer` | What one transfer from the office contained. |
@@ -75,6 +77,7 @@ Generated from the classes that define these words. Run
 | `Shift` | `ginning.plant` | One run of the plant, with what stopped it. |
 | `ShiftLog` | `ginning.plant` | Every shift run this season. |
 | `ShippingOrder` | `warehouse.shipping` | One order to move a set of bales out of a warehouse. |
+| `Standard` | `classing.calibration` | One box of standard cotton and the values assigned to it. |
 | `Staple` | `classing.measure` | Fibre length in thirty seconds of an inch, the way it is traded. |
 | `Statement` | `settlement.statement` | What one producer is owed, or owes. |
 | `Stoppage` | `ginning.plant` | One thing that stopped the plant, and for how long. |

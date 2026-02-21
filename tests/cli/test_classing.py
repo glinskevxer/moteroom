@@ -171,3 +171,47 @@ def test_a_reclass_of_a_bale_with_no_card(classed):
 
 def test_a_reclass_naming_nothing(classed):
     assert classed("card", "reclass", "--reason", "leaf", "--by", "BLYTHE").exit_code != 0
+
+
+ASSIGNED = "micronaire=4.3,strength=29.4,uniformity=81.2,length=1.1"
+
+
+def test_a_calibration_check_reads_off_the_standard(classed):
+    made = classed(
+        "card", "calibrate", "sc-114", ASSIGNED, "--assigned", ASSIGNED, "--on", "2025-10-14"
+    )
+    assert made.exit_code == 0
+    assert "passed" in made.output
+    assert "+0.0" in made.output
+
+
+def test_a_line_outside_tolerance_says_which_measure(classed):
+    readings = "micronaire=4.6,strength=29.4,uniformity=81.2,length=1.1"
+    made = classed(
+        "card", "calibrate", "SC-114", readings, "--assigned", ASSIGNED, "--on", "2025-10-14"
+    )
+    assert "out on micronaire" in made.output
+    assert "out" in made.output
+
+
+def test_a_reading_that_will_not_read(classed):
+    readings = "micronaire=high,strength=29.4,uniformity=81.2,length=1.1"
+    assert (
+        classed("card", "calibrate", "SC-114", readings, "--assigned", ASSIGNED).exit_code != 0
+    )
+
+
+def test_a_pair_that_is_not_a_pair(classed):
+    assert (
+        classed("card", "calibrate", "SC-114", "micronaire", "--assigned", ASSIGNED).exit_code
+        != 0
+    )
+
+
+def test_a_standard_missing_a_measure(classed):
+    assert (
+        classed(
+            "card", "calibrate", "SC-114", ASSIGNED, "--assigned", "micronaire=4.3"
+        ).exit_code
+        != 0
+    )
