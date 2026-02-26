@@ -1,6 +1,6 @@
 import pytest
 
-from moteroom.cli.ginning import read_tickets
+from moteroom.cli.options import read_numbers
 from moteroom.core.errors import ValidationError
 from tests.conftest import Run
 
@@ -96,14 +96,14 @@ def test_closing_a_lot_nobody_ginned(ginned):
     assert ginned("lot", "close", "9").exit_code != 0
 
 
-def test_read_tickets_reads_a_list():
-    assert read_tickets("1,2, 3") == (1, 2, 3)
+def test_a_ticket_list_reads_off_the_command_line():
+    assert read_numbers("1,2, 3", "tickets") == (1, 2, 3)
 
 
 @pytest.mark.parametrize("text", ["", "one", "1,,2", "1;2"])
-def test_read_tickets_refuses_junk(text):
+def test_a_ticket_list_refuses_junk(text):
     with pytest.raises(ValidationError):
-        read_tickets(text)
+        read_numbers(text, "tickets")
 
 
 def test_a_shift_reports_its_rate(ginned):

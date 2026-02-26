@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-from decimal import Decimal, InvalidOperation
-
 import click
 
 from moteroom.cli.context import Session
+from moteroom.cli.options import read_decimal
 from moteroom.cli.output import render_pairs, render_table
-from moteroom.core.errors import ValidationError
 from moteroom.core.ids import BaleId
 from moteroom.core.money import CentsPerPound
 from moteroom.loan import pool
@@ -24,14 +22,6 @@ def base_rate(session: Session) -> CentsPerPound:
         return repos.rates.get(session.season).base_rate
     posted = repos.settings.get_or("base_loan_rate", "")
     return CentsPerPound.parse(posted) if posted else default_terms().base_rate
-
-
-def read_rate(text: str, field: str) -> Decimal:
-    """Read a percentage off the command line."""
-    try:
-        return Decimal(text)
-    except InvalidOperation as exc:
-        raise ValidationError(field, f"{text!r} is not a rate") from exc
 
 
 @click.group()
@@ -102,7 +92,7 @@ def redeem(session: Session, bale_id: str, price: str, days: int, interest: str)
         loan_rate=breakdown.rate,
         world_price=CentsPerPound.parse(price),
         days=days,
-        annual_rate=read_rate(interest, "interest"),
+        annual_rate=read_decimal(interest, "interest"),
     )
     click.echo(render_pairs([(name, str(amount)) for name, amount in made.lines()]))
     click.echo()

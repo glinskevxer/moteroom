@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import date, datetime, time
+from decimal import Decimal, InvalidOperation
 from typing import Any, TypeVar
 
 import click
@@ -38,6 +39,40 @@ def read_time(text: str) -> time:
         return datetime.strptime(text.strip(), TIME_FORMAT).time()
     except ValueError as exc:
         raise ValidationError("time", f"{text!r} is not a time") from exc
+
+
+def read_decimal(text: str, field: str) -> Decimal:
+    """Read a plain number off the command line."""
+    try:
+        return Decimal(text)
+    except InvalidOperation as exc:
+        raise ValidationError(field, f"{text!r} is not a number") from exc
+
+
+def read_numbers(text: str, field: str) -> tuple[int, ...]:
+    """Read a list such as ``1,2,3`` off the command line."""
+    numbers: list[int] = []
+    for part in text.split(","):
+        cleaned = part.strip()
+        if not cleaned.isdigit():
+            raise ValidationError(field, f"{part.strip()!r} is not a number")
+        numbers.append(int(cleaned))
+    if not numbers:
+        raise ValidationError(field, "names nothing")
+    return tuple(numbers)
+
+
+def read_pairs(text: str, field: str) -> dict[str, Decimal]:
+    """Read ``name=value`` pairs off the command line."""
+    values: dict[str, Decimal] = {}
+    for part in text.split(","):
+        name, sep, value = part.strip().partition("=")
+        if not sep or not name.strip():
+            raise ValidationError(field, f"{part.strip()!r} is not a name and a value")
+        values[name.strip().lower()] = read_decimal(value, field)
+    if not values:
+        raise ValidationError(field, "names nothing")
+    return values
 
 
 def date_option(flag: str, target: str, what: str) -> Callable[[Command], Command]:

@@ -8,7 +8,6 @@ and the rest goes in.
 
 from __future__ import annotations
 
-from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 import click
@@ -17,7 +16,7 @@ from moteroom.classing.calibration import MEASURES, CalibrationLog, Check, Stand
 from moteroom.classing.reclass import Request, render_requests
 from moteroom.classing.transfer import parse_file
 from moteroom.cli.context import Session
-from moteroom.cli.options import on_option, read_date
+from moteroom.cli.options import on_option, read_date, read_pairs
 from moteroom.cli.output import render_pairs, render_table
 from moteroom.core.errors import ConflictError, ValidationError
 from moteroom.core.ids import BaleId
@@ -186,11 +185,11 @@ def calibrate(
     on_text: str | None,
 ) -> None:
     """Check the classing line against a standard and say whether it is out."""
-    made = Standard(standard_name.strip().upper(), _pairs(assigned))
+    made = Standard(standard_name.strip().upper(), read_pairs(assigned, "assigned"))
     run = Check(
         standard=made,
         checked_on=read_date(on_text, session.season.start),
-        readings=_pairs(",".join(readings)),
+        readings=read_pairs(",".join(readings), "readings"),
         operator=operator.strip().upper(),
     )
     log = CalibrationLog()
@@ -210,17 +209,3 @@ def calibrate(
     )
     click.echo()
     click.echo(str(run))
-
-
-def _pairs(text: str) -> dict[str, Decimal]:
-    """Read measure=value pairs off the command line."""
-    values: dict[str, Decimal] = {}
-    for part in text.split(","):
-        name, sep, value = part.strip().partition("=")
-        if not sep:
-            raise ValidationError("readings", f"{part.strip()!r} is not a measure and a value")
-        try:
-            values[name.strip().lower()] = Decimal(value)
-        except InvalidOperation as exc:
-            raise ValidationError("readings", f"{value!r} is not a reading") from exc
-    return values

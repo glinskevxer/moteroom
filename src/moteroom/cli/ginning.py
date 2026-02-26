@@ -10,7 +10,7 @@ from __future__ import annotations
 import click
 
 from moteroom.cli.context import Session
-from moteroom.cli.options import on_option, read_date, read_time
+from moteroom.cli.options import on_option, read_date, read_numbers, read_time
 from moteroom.cli.output import render_pairs, render_table
 from moteroom.core.errors import ConflictError, ValidationError
 from moteroom.core.ids import LotId
@@ -21,19 +21,6 @@ from moteroom.ginning.plant import Shift, ShiftLog, Stoppage
 from moteroom.ginning.reconcile import reconcile
 from moteroom.ginning.run import GinRun
 from moteroom.ginning.turnout import summarise
-
-
-def read_tickets(text: str) -> tuple[int, ...]:
-    """Read a ticket list such as ``1,2,3`` off the command line."""
-    numbers: list[int] = []
-    for part in text.split(","):
-        cleaned = part.strip()
-        if not cleaned.isdigit():
-            raise ValidationError("tickets", f"{part.strip()!r} is not a ticket number")
-        numbers.append(int(cleaned))
-    if not numbers:
-        raise ValidationError("tickets", "a lot has to gin something")
-    return tuple(numbers)
 
 
 @click.group()
@@ -57,7 +44,7 @@ def gin(
     on_text: str | None,
 ) -> None:
     """Gin a set of tickets as one lot."""
-    numbers = read_tickets(tickets)
+    numbers = read_numbers(tickets, "tickets")
     with session.writing() as repos:
         ticket_repo = repos.tickets
         lots = repos.lots

@@ -59,3 +59,41 @@ def test_the_csv_flag_is_off_unless_it_is_given():
 
     assert CliRunner().invoke(command, []).output.strip() == "False"
     assert CliRunner().invoke(command, ["--csv"]).output.strip() == "True"
+
+
+def test_a_number_reads_off_the_command_line():
+    from decimal import Decimal
+
+    from moteroom.cli.options import read_decimal
+
+    assert read_decimal("6.25", "interest") == Decimal("6.25")
+    with pytest.raises(ValidationError):
+        read_decimal("lots", "interest")
+
+
+def test_a_list_of_numbers_reads_and_refuses_junk():
+    from moteroom.cli.options import read_numbers
+
+    assert read_numbers(" 1, 2 ,3", "tickets") == (1, 2, 3)
+    for text in ("", "one", "1;2"):
+        with pytest.raises(ValidationError):
+            read_numbers(text, "tickets")
+
+
+def test_pairs_read_by_name():
+    from decimal import Decimal
+
+    from moteroom.cli.options import read_pairs
+
+    assert read_pairs("Mike=4.3, staple=36", "readings") == {
+        "mike": Decimal("4.3"),
+        "staple": Decimal("36"),
+    }
+
+
+def test_pairs_refuse_something_that_is_not_a_pair():
+    from moteroom.cli.options import read_pairs
+
+    for text in ("mike", "=4.3", "mike=high"):
+        with pytest.raises(ValidationError):
+            read_pairs(text, "readings")
