@@ -209,3 +209,24 @@ def test_the_season_page_on_an_empty_book(run):
 def test_the_season_page_comes_out_as_csv(worked):
     made = worked("report", "season", "--csv")
     assert made.output.splitlines()[0] == "measure,value"
+
+
+def test_the_colour_ladder_prints_every_rung(worked):
+    made = worked("report", "ladder")
+    assert made.exit_code == 0
+    assert "colour ladder" in made.output
+    assert "codes used" in made.output
+
+
+def test_a_band_ladder_prints_its_bands(worked):
+    made = worked("report", "ladder", "--kind", "micronaire")
+    assert "3.7 to 4.2" in made.output
+
+
+def test_the_leaf_ladder_prints(worked):
+    made = worked("report", "ladder", "--kind", "leaf", "--csv")
+    assert made.output.splitlines()[0] == "grade,cents,bales,percent,moved"
+
+
+def test_a_ladder_nobody_has(worked):
+    assert worked("report", "ladder", "--kind", "colour-ish").exit_code != 0

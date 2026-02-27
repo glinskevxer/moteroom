@@ -23,7 +23,7 @@ from moteroom.core.weight import total
 from moteroom.ginning.reconcile import reconcile
 from moteroom.loan import pool
 from moteroom.receiving.yard import ModuleYard
-from moteroom.reporting import daily, exceptions, position, quality
+from moteroom.reporting import daily, exceptions, ladder, position, quality
 from moteroom.reporting import season as season_report
 from moteroom.reporting.report import Report
 from moteroom.reporting.settlement import settlement_summary, statement_report, unsettled
@@ -273,3 +273,33 @@ def season_summary(session: Session, csv_out: bool) -> None:
         settled=len(repos.statements.for_season(session.season)),
     )
     emit(season_report.summary(facts), csv_out)
+
+
+@report.command("ladder")
+@click.option(
+    "--kind",
+    type=click.Choice(["micronaire", "staple", "strength", "uniformity", "colour", "leaf"]),
+    default="colour",
+    show_default=True,
+    help="Which ladder to print.",
+)
+@csv_option
+@click.pass_obj
+def ladder_report(session: Session, kind: str, csv_out: bool) -> None:
+    """Where the season's bales sat on the schedule."""
+    repos = session.open_repos()
+    cards = repos.cards.for_season(session.season)
+    net = total(
+        [
+            one.net
+            for one in repos.bales.for_season(session.season)
+            if repos.cards.has(one.bale_id)
+        ]
+    )
+    if kind == "colour":
+        emit(ladder.grade_ladder(cards, net), csv_out)
+        return
+    if kind == "leaf":
+        emit(ladder.leaf_ladder(cards, net), csv_out)
+        return
+    emit(ladder.band_ladder(kind, cards, net), csv_out)
