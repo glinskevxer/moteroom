@@ -48,6 +48,7 @@ jobs:
       - run: python -m moteroom.tools.check_cli
       - run: python -m moteroom.tools.check_glossary
       - run: python -m moteroom.tools.check_errors
+      - run: python -m moteroom.tools.check_tests
       - run: python -m moteroom.tools.check_workflow
       - run: python -m moteroom.tools.release_check
 
