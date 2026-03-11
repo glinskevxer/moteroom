@@ -116,3 +116,25 @@ def test_restoration_past_the_ceiling_says_so(pressed):
 
 def test_restoration_cannot_take_moisture_out(pressed):
     assert pressed("bale", "restore", "500", "7.0", "--to", "5.0").exit_code != 0
+
+
+def test_the_wrap_store_says_how_many_bales_it_covers(pressed):
+    made = pressed("bale", "wrap", "500", "4000")
+    assert made.exit_code == 0
+    assert "bales it wraps        500" in made.output
+    assert "a bale costs" in made.output
+
+
+def test_the_wrap_store_says_what_is_short(pressed):
+    made = pressed("bale", "wrap", "100", "400", "--to-gin", "200")
+    assert "100 bags" in made.output
+    assert "1200 ties" in made.output
+
+
+def test_a_store_that_covers_the_season_is_short_of_nothing(pressed):
+    made = pressed("bale", "wrap", "500", "4000", "--to-gin", "100")
+    assert "short for the season  nothing" in made.output
+
+
+def test_a_delivery_of_nothing_is_refused(pressed):
+    assert pressed("bale", "wrap", "0", "4000").exit_code != 0

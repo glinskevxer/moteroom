@@ -16,9 +16,10 @@ from moteroom.cli.options import on_option, read_date
 from moteroom.cli.output import render_pairs, render_table
 from moteroom.core.errors import ConflictError
 from moteroom.core.ids import LotId
-from moteroom.core.money import CentsPerPound
+from moteroom.core.money import CentsPerPound, Money
 from moteroom.core.weight import Weight, total
 from moteroom.press.restoration import Restoration
+from moteroom.press.tare import BAGS, TIES, Delivery, TareStore
 from moteroom.receiving.ticket import clean_moisture
 
 
@@ -137,3 +138,40 @@ def restore(dry_weight: str, before: str, target: str, price: str | None) -> Non
     if price:
         rows.append(("water worth", str(made.value_of_water(CentsPerPound.parse(price)))))
     click.echo(render_pairs(rows))
+
+
+@bale.command("wrap")
+@click.argument("bags", type=int)
+@click.argument("ties", type=int)
+@click.option("--to-gin", type=int, default=0, show_default=True, help="Bales still to gin.")
+@click.option("--bag-cost", default="6.40", show_default=True, help="What a bag cost.")
+@click.option("--tie-cost", default="0.85", show_default=True, help="What a tie cost.")
+@click.pass_obj
+def wrap(
+    session: Session, bags: int, ties: int, to_gin: int, bag_cost: str, tie_cost: str
+) -> None:
+    """Say whether the bagging and ties will see the season out."""
+    store = TareStore()
+    when = session.season.start
+    store.extend(
+        [
+            Delivery(BAGS, when, bags, Money.parse(bag_cost), "WRAPCO"),
+            Delivery(TIES, when, ties, Money.parse(tie_cost), "WRAPCO"),
+        ]
+    )
+    short = store.short_for(to_gin) if to_gin else {}
+    click.echo(
+        render_pairs(
+            [
+                ("bags", str(store.on_hand(BAGS))),
+                ("ties", str(store.on_hand(TIES))),
+                ("bales it wraps", str(store.bales_left())),
+                ("value", str(store.value())),
+                ("a bale costs", str(store.cost_per_bale())),
+                (
+                    "short for the season",
+                    ", ".join(f"{count} {kind}" for kind, count in short.items()) or "nothing",
+                ),
+            ]
+        )
+    )

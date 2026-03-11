@@ -32,6 +32,7 @@ Generated from the classes that define these words. Run
 | `Contract` | `settlement.contract` | One promise to deliver bales inside a window. |
 | `Deferral` | `settlement.deferred` | One agreement to hold a producer's money until a named day. |
 | `DeferralBook` | `settlement.deferred` | Every deferral the gin has agreed to. |
+| `Delivery` | `press.tare` | One lot of wrap arriving at the plant. |
 | `EquityLedger` | `settlement.equity` | Equity by member and by year, and the fund that revolves it out. |
 | `Exposure` | `warehouse.insurance` | What is in store, what it is worth, and what the policy would pay. |
 | `Extraneous` | `classing.defect` | One finding: what it was and how much of it. |
@@ -86,6 +87,7 @@ Generated from the classes that define these words. Run
 | `Statement` | `settlement.statement` | What one producer is owed, or owes. |
 | `Stoppage` | `ginning.plant` | One thing that stopped the plant, and for how long. |
 | `Strength` | `classing.measure` | Grams per tex, which is what breaks in the spinning mill. |
+| `TareStore` | `press.tare` | What wrap is on hand, and whether it will see the season out. |
 | `Tariff` | `warehouse.storage` | The warehouse's published rates for a season. |
 | `Terms` | `settlement.terms` | Everything a season is settled against. |
 | `TicketBook` | `receiving.book` | Every ticket written this season, and which of them still count. |
