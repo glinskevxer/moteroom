@@ -30,6 +30,8 @@ Generated from the classes that define these words. Run
 | `ColorGrade` | `classing.color` | A two digit colour code, held as the digits rather than as a number. |
 | `ConflictError` | `core.errors` | A write would contradict something the book already holds. |
 | `Contract` | `settlement.contract` | One promise to deliver bales inside a window. |
+| `Deferral` | `settlement.deferred` | One agreement to hold a producer's money until a named day. |
+| `DeferralBook` | `settlement.deferred` | Every deferral the gin has agreed to. |
 | `EquityLedger` | `settlement.equity` | Equity by member and by year, and the fund that revolves it out. |
 | `Exposure` | `warehouse.insurance` | What is in store, what it is worth, and what the policy would pay. |
 | `Extraneous` | `classing.defect` | One finding: what it was and how much of it. |

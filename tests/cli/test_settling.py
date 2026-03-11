@@ -173,3 +173,30 @@ def test_clearing_a_cheque_nobody_wrote(ginned):
 
 def test_an_empty_cheque_list_says_nothing(ginned):
     assert "(nothing)" in ginned("settle", "cheques").output
+
+
+def test_a_deferral_prices_what_it_will_cost(ginned):
+    made = ginned("settle", "defer", "blythe", "10000.00", "2026-01-15", "--on", "2025-09-01")
+    assert made.exit_code == 0
+    assert "days      136" in made.output
+    assert "interest" in made.output
+
+
+def test_a_deferral_inside_the_year_is_refused(ginned):
+    assert (
+        ginned(
+            "settle", "defer", "BLYTHE", "10000.00", "2025-12-31", "--on", "2025-09-01"
+        ).exit_code
+        != 0
+    )
+
+
+def test_a_deferral_of_nothing_is_refused(ginned):
+    assert ginned("settle", "defer", "BLYTHE", "0.00", "2026-01-15").exit_code != 0
+
+
+def test_a_rate_that_will_not_read(ginned):
+    assert (
+        ginned("settle", "defer", "BLYTHE", "100.00", "2026-01-15", "--rate", "lots").exit_code
+        != 0
+    )

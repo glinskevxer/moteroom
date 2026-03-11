@@ -13,11 +13,12 @@ from datetime import date
 import click
 
 from moteroom.cli.context import Session
-from moteroom.cli.options import on_option, read_date
+from moteroom.cli.options import on_option, read_date, read_decimal
 from moteroom.cli.output import render_pairs, render_table
 from moteroom.core.money import Money
 from moteroom.service.settlement import SettlementService
 from moteroom.settlement.cheque import Cheque
+from moteroom.settlement.deferred import Deferral, DeferralBook
 from moteroom.settlement.equity import allocate_margin
 from moteroom.settlement.statement import Advance, Statement
 from moteroom.settlement.terms import Terms
@@ -249,3 +250,40 @@ def list_cheques(session: Session) -> None:
     if rows:
         click.echo()
         click.echo(f"{register.owed()} outstanding, {register.paid()} cleared")
+
+
+@settle.command("defer")
+@click.argument("producer")
+@click.argument("amount")
+@click.argument("pay_on")
+@click.option("--rate", default="4.00", show_default=True, help="Interest while it is held.")
+@on_option("Agreement date")
+@click.pass_obj
+def defer(
+    session: Session, producer: str, amount: str, pay_on: str, rate: str, on_text: str | None
+) -> None:
+    """Agree to hold a producer's money until a day in the next year."""
+    agreed = read_date(on_text, session.season.start)
+    made = Deferral(
+        producer=producer.strip().upper(),
+        amount=Money.parse(amount),
+        agreed_on=agreed,
+        pay_on=read_date(pay_on, session.season.end),
+        rate=read_decimal(rate, "rate"),
+    )
+    book = DeferralBook()
+    book.agree(made)
+    click.echo(
+        render_pairs(
+            [
+                ("producer", made.producer),
+                ("held", str(made.amount)),
+                ("agreed", made.agreed_on.isoformat()),
+                ("pays", made.pay_on.isoformat()),
+                ("days", str(made.days)),
+                ("rate", f"{made.rate}%"),
+                ("interest", str(made.interest(made.pay_on))),
+                ("due", str(made.due(made.pay_on))),
+            ]
+        )
+    )
