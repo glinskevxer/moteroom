@@ -160,3 +160,25 @@ def test_a_sale_with_nobody_ginning_still_prices(run: Run) -> None:
     made = run("lot", "byproduct", "motes", "24000", "180.00")
     assert made.exit_code == 0
     assert "BLYTHE" not in made.output
+
+
+def test_the_driers_are_set_off_the_moisture(ginned):
+    made = ginned("lot", "driers", "12.0")
+    assert made.exit_code == 0
+    assert "recommended first  280" in made.output
+    assert "sound" in made.output
+
+
+def test_a_setting_that_cooks_the_fibre_is_flagged(ginned):
+    made = ginned("lot", "driers", "18.0", "--first", "350", "--second", "300")
+    assert "check it" in made.output
+    assert "damage line" in made.output
+
+
+def test_a_trim_stage_running_hot_is_flagged(ginned):
+    made = ginned("lot", "driers", "12.0", "--first", "280", "--second", "270")
+    assert "trim stage" in made.output
+
+
+def test_a_temperature_off_the_dial_is_refused(ginned):
+    assert ginned("lot", "driers", "12.0", "--first", "400", "--second", "200").exit_code != 0

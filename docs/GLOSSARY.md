@@ -78,6 +78,7 @@ Generated from the classes that define these words. Run
 | `Season` | `core.season` | One crop year, named for the calendar year it opens in. |
 | `SeedCredit` | `settlement.seed` | What the seed off one producer's cotton came to. |
 | `SeedTerms` | `settlement.seed` | What the ginning agreement says about the seed. |
+| `Setting` | `ginning.drying` | What the two stages are actually set to, against what came in. |
 | `ShareSplit` | `receiving.party` | How a farm's cotton divides, in whole shares rather than percentages. |
 | `Shift` | `ginning.plant` | One run of the plant, with what stopped it. |
 | `ShiftLog` | `ginning.plant` | Every shift run this season. |

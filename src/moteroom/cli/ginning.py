@@ -7,6 +7,8 @@ disagrees with its own tickets is a lot nobody can settle off.
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 import click
 
 from moteroom.cli.context import Session
@@ -17,6 +19,7 @@ from moteroom.core.ids import LotId
 from moteroom.core.money import Money
 from moteroom.core.weight import Weight, total
 from moteroom.ginning.byproduct import KINDS, ByproductLedger, Sale
+from moteroom.ginning.drying import Setting, recommended, settings_for
 from moteroom.ginning.plant import Shift, ShiftLog, Stoppage
 from moteroom.ginning.reconcile import reconcile
 from moteroom.ginning.run import GinRun
@@ -236,3 +239,30 @@ def byproduct(
     rows = [[code, str(amount)] for code, amount in sorted(ledger.allocate(volume).items())]
     click.echo()
     click.echo(render_table(["producer", "share"], rows, right=(1,)))
+
+
+@lot.command("driers")
+@click.argument("moisture")
+@click.option("--first", type=int, default=None, help="What the first stage is set to.")
+@click.option("--second", type=int, default=None, help="What the trim stage is set to.")
+def driers(moisture: str, first: int | None, second: int | None) -> None:
+    """Check the drier settings against the cotton coming in."""
+    reading = Decimal(moisture)
+    made = (
+        settings_for(reading)
+        if first is None or second is None
+        else Setting(reading, first, second)
+    )
+    click.echo(
+        render_pairs(
+            [
+                ("moisture", f"{made.moisture}%"),
+                ("recommended first", str(recommended(made.moisture))),
+                ("first stage", str(made.first)),
+                ("trim stage", str(made.second)),
+                ("verdict", "sound" if made.is_sound else "check it"),
+            ]
+        )
+    )
+    for warning in made.warnings():
+        click.echo(f"  {warning}")
