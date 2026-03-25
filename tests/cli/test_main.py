@@ -264,3 +264,26 @@ def test_compacting_says_what_it_saved(runner, tmp_path):
 def test_size_on_a_book_that_is_not_there(runner, tmp_path):
     result = runner.invoke(main, ["--book", str(tmp_path / "none.sqlite3"), "size"])
     assert result.exit_code != 0
+
+
+def test_an_export_writes_the_season_out(runner, tmp_path):
+    path = tmp_path / "season.sqlite3"
+    base = ["--book", str(path), "--season", "2025"]
+    runner.invoke(main, [*base, "producer", "add", "BLYTHE", "Blythe Farms"])
+    result = runner.invoke(
+        main, [*base, "export", str(tmp_path / "out"), "--as-of", "2026-02-03"]
+    )
+    assert result.exit_code == 0
+    assert "files in" in result.output
+    assert (tmp_path / "out" / "moteroom-2025" / "season.txt").exists()
+
+
+def test_an_export_will_not_write_over_another(runner, tmp_path):
+    path = tmp_path / "season.sqlite3"
+    base = ["--book", str(path), "--season", "2025"]
+    runner.invoke(main, [*base, "init"])
+    runner.invoke(main, [*base, "export", str(tmp_path / "out"), "--as-of", "2026-02-03"])
+    again = runner.invoke(
+        main, [*base, "export", str(tmp_path / "out"), "--as-of", "2026-02-03"]
+    )
+    assert again.exit_code != 0

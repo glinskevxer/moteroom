@@ -2,8 +2,10 @@
 
 The direction of every import is the design. Core knows nothing about anything.
 The domain packages know core and each other. Storage knows the domain, and the
-domain does not know storage. Reporting reads the domain and prints. The command
-line is allowed to know everything, because that is its job.
+domain does not know storage. Reporting reads the domain and prints. Services
+sit above storage and reporting both, because assembling a report out of the
+book is exactly what a service is for. The command line is allowed to know
+everything, because that is its job.
 
 An import that runs the wrong way does not break a test. It quietly makes the
 domain impossible to use without a database, which is the thing this package
@@ -30,7 +32,7 @@ ALLOWED: dict[str, set[str]] = {
     "settlement": CORE | DOMAIN,
     "storage": CORE | DOMAIN | {"storage"},
     "reporting": CORE | DOMAIN | {"reporting"},
-    "service": CORE | DOMAIN | {"storage", "service"},
+    "service": CORE | DOMAIN | {"storage", "reporting", "service"},
     "cli": CORE | DOMAIN | {"storage", "reporting", "service", "cli"},
     "tools": CORE | DOMAIN | {"storage", "reporting", "service", "cli", "tools"},
 }

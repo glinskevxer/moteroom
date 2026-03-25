@@ -35,6 +35,11 @@ def test_the_service_layer_is_the_one_allowed_to_reach_storage():
     assert "service" not in ALLOWED["storage"]
 
 
+def test_a_service_may_assemble_a_report_and_a_report_may_not_reach_a_service():
+    assert "reporting" in ALLOWED["service"]
+    assert "service" not in ALLOWED["reporting"]
+
+
 def test_a_package_is_read_off_a_dotted_name():
     assert _package_of("moteroom.core.weight") == "core"
     assert _package_of("moteroom") == ""

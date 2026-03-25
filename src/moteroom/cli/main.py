@@ -19,6 +19,7 @@ from moteroom.cli.context import DEFAULT_BOOK, Session
 from moteroom.cli.contracts import contract
 from moteroom.cli.ginning import lot
 from moteroom.cli.loans import loan
+from moteroom.cli.options import read_date
 from moteroom.cli.press import bale
 from moteroom.cli.producers import producer
 from moteroom.cli.receiving import ticket
@@ -28,7 +29,7 @@ from moteroom.cli.settling import settle
 from moteroom.cli.trail import audit
 from moteroom.cli.warehousing import order, receipt
 from moteroom.core.errors import MoteroomError
-from moteroom.service import closing
+from moteroom.service import closing, export
 from moteroom.storage.backup import backup, verify
 from moteroom.storage.maintenance import compact, measure, table_sizes
 from moteroom.storage.migrations import LATEST
@@ -143,6 +144,20 @@ def show_size(session: Session) -> None:
     for table, rows in table_sizes(book).items():
         if rows:
             click.echo(f"  {table:<16} {rows}")
+
+
+@main.command("export")
+@click.argument("into", type=click.Path(path_type=Path))
+@click.option("--as-of", "as_of", default=None, help="Export date, Y-m-d.")
+@click.pass_obj
+def export_season(session: Session, into: Path, as_of: str | None) -> None:
+    """Write the whole season out as files."""
+    book = session.require_book()
+    when = read_date(as_of, date.today())
+    made = export.write(book, session.season, into, when)
+    click.echo(str(made))
+    for name in made.files:
+        click.echo(f"  {name}")
 
 
 @main.command("close")
