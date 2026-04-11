@@ -29,7 +29,7 @@ from moteroom.cli.settling import settle
 from moteroom.cli.trail import audit
 from moteroom.cli.warehousing import order, receipt
 from moteroom.core.errors import MoteroomError
-from moteroom.service import closing, export
+from moteroom.service import closing, doctor, export
 from moteroom.storage.backup import backup, verify
 from moteroom.storage.maintenance import compact, measure, table_sizes
 from moteroom.storage.migrations import LATEST
@@ -158,6 +158,22 @@ def export_season(session: Session, into: Path, as_of: str | None) -> None:
     click.echo(str(made))
     for name in made.files:
         click.echo(f"  {name}")
+
+
+@main.command("doctor")
+@click.option("--as-of", "as_of", default=None, help="Date to look as at, Y-m-d.")
+@click.pass_obj
+def look_over(session: Session, as_of: str | None) -> None:
+    """Look over the book and say whether anything is wrong."""
+    book = session.require_book()
+    when = read_date(as_of, date.today())
+    notes = doctor.look(book, session.season, session.book_path, when)
+    for note in notes:
+        click.echo(str(note))
+    click.echo()
+    click.echo(f"the book is {doctor.worst(notes)}")
+    if not doctor.is_sound(notes):
+        raise SystemExit(1)
 
 
 @main.command("close")

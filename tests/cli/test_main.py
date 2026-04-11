@@ -287,3 +287,33 @@ def test_an_export_will_not_write_over_another(runner, tmp_path):
         main, [*base, "export", str(tmp_path / "out"), "--as-of", "2026-02-03"]
     )
     assert again.exit_code != 0
+
+
+def test_the_doctor_looks_over_a_fresh_book(runner, tmp_path):
+    path = tmp_path / "season.sqlite3"
+    base = ["--book", str(path), "--season", "2025"]
+    runner.invoke(main, [*base, "init"])
+    result = runner.invoke(main, [*base, "doctor", "--as-of", "2025-12-01"])
+    assert result.exit_code == 0
+    assert "the book is missing" in result.output
+    assert "gin_code" in result.output
+
+
+def test_the_doctor_reads_fine_once_the_book_is_set_up(runner, tmp_path):
+    path = tmp_path / "season.sqlite3"
+    base = ["--book", str(path), "--season", "2025"]
+    for name, value in (
+        ("gin_code", "41207"),
+        ("classing_office", "MEMPHIS"),
+        ("warehouse", "MW14"),
+        ("base_loan_rate", "52.00"),
+    ):
+        runner.invoke(main, [*base, "setting", "set", name, value])
+    runner.invoke(main, [*base, "settle", "rates"])
+    result = runner.invoke(main, [*base, "doctor", "--as-of", "2025-12-01"])
+    assert "the book is fine" in result.output
+
+
+def test_the_doctor_needs_a_book(runner, tmp_path):
+    result = runner.invoke(main, ["--book", str(tmp_path / "none.sqlite3"), "doctor"])
+    assert result.exit_code != 0
