@@ -58,6 +58,7 @@ Generated from the classes that define these words. Run
 | `MoteroomError` | `core.errors` | Base class for everything this package raises on purpose. |
 | `Movement` | `warehouse.movement` | One bale leaving one house for another. |
 | `NotFoundError` | `core.errors` | A record was asked for by key and the book does not hold it. |
+| `Pair` | `classing.sample` | Both cuts off one bale, and what they say about each other. |
 | `Patronage` | `settlement.equity` | One member's share of a season's margin. |
 | `Policy` | `warehouse.insurance` | One policy over bales in store. |
 | `Pool` | `loan.pool` | Every bale that could be priced, and the ones that could not. |
@@ -74,6 +75,7 @@ Generated from the classes that define these words. Run
 | `Request` | `classing.reclass` | One bale sent back to the office. |
 | `Restoration` | `press.restoration` | One press worth of restoration, in and out. |
 | `Sale` | `ginning.byproduct` | One load of something that is not lint or seed. |
+| `Sample` | `classing.sample` | One cut off one side of a bale. |
 | `ScaleBook` | `receiving.scale` | Every certificate the plant holds, by scale. |
 | `Season` | `core.season` | One crop year, named for the calendar year it opens in. |
 | `SeedCredit` | `settlement.seed` | What the seed off one producer's cotton came to. |

@@ -14,6 +14,7 @@ import click
 
 from moteroom.classing.calibration import MEASURES, CalibrationLog, Check, Standard
 from moteroom.classing.reclass import Request, render_requests
+from moteroom.classing.sample import cut
 from moteroom.classing.transfer import parse_file
 from moteroom.cli.context import Session
 from moteroom.cli.options import on_option, read_date, read_pairs
@@ -209,3 +210,30 @@ def calibrate(
     )
     click.echo()
     click.echo(str(run))
+
+
+@card.command("sample")
+@click.argument("bale_id")
+@click.option("--by", "cut_by", required=True, help="Who cut the samples.")
+@click.option("--grams", type=int, default=100, show_default=True, help="Grams a side.")
+@on_option("Sampling date")
+@click.pass_obj
+def sample(
+    session: Session, bale_id: str, cut_by: str, grams: int, on_text: str | None
+) -> None:
+    """Cut both samples off a bale for the office."""
+    tag = BaleId.parse(bale_id)
+    session.open_repos().bales.get(tag)
+    made = cut(tag, read_date(on_text, session.season.start), cut_by.strip().upper(), grams)
+    click.echo(
+        render_pairs(
+            [
+                ("bale", tag.grouped()),
+                ("cut", made.first.cut_on.isoformat()),
+                ("by", made.first.cut_by),
+                ("side a", f"{made.first.grams}g"),
+                ("side b", f"{made.second.grams}g"),
+                ("enough", "yes" if made.is_enough else "no"),
+            ]
+        )
+    )

@@ -215,3 +215,18 @@ def test_a_standard_missing_a_measure(classed):
         ).exit_code
         != 0
     )
+
+
+def test_a_bale_is_sampled_both_sides(classed):
+    made = classed("card", "sample", tag(1), "--by", "talley", "--on", "2025-10-18")
+    assert made.exit_code == 0
+    assert "side a  100g" in made.output
+    assert "enough  yes" in made.output
+
+
+def test_a_bale_nobody_pressed_cannot_be_sampled(classed):
+    assert classed("card", "sample", tag(9), "--by", "TALLEY").exit_code != 0
+
+
+def test_a_cut_off_the_scale_is_refused(classed):
+    assert classed("card", "sample", tag(1), "--by", "TALLEY", "--grams", "20").exit_code != 0
