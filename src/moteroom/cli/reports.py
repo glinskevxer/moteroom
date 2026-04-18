@@ -24,10 +24,12 @@ from moteroom.ginning.reconcile import reconcile
 from moteroom.loan import pool
 from moteroom.receiving.yard import ModuleYard
 from moteroom.reporting import daily, exceptions, ladder, position, quality
+from moteroom.reporting import producers as producer_report
 from moteroom.reporting import season as season_report
 from moteroom.reporting.report import Report
 from moteroom.reporting.settlement import settlement_summary, statement_report, unsettled
 from moteroom.service import inventory
+from moteroom.service.producer import standing
 from moteroom.service.settlement import SettlementService
 from moteroom.storage.rates import default_terms
 from moteroom.warehouse.storage import Tariff
@@ -303,3 +305,14 @@ def ladder_report(session: Session, kind: str, csv_out: bool) -> None:
         emit(ladder.leaf_ladder(cards, net), csv_out)
         return
     emit(ladder.band_ladder(kind, cards, net), csv_out)
+
+
+@report.command("producers")
+@csv_option
+@click.pass_obj
+def producers_report(session: Session, csv_out: bool) -> None:
+    """Every producer at a glance, most cotton first."""
+    book = session.require_book()
+    held = session.open_repos().tickets.book(session.season)
+    standings = [standing(book, session.season, code) for code in held.producers()]
+    emit(producer_report.summary(standings), csv_out)

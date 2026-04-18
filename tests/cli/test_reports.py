@@ -230,3 +230,15 @@ def test_the_leaf_ladder_prints(worked):
 
 def test_a_ladder_nobody_has(worked):
     assert worked("report", "ladder", "--kind", "colour-ish").exit_code != 0
+
+
+def test_the_producers_page_reads_off_the_book(worked):
+    made = worked("report", "producers")
+    assert made.exit_code == 0
+    assert "BLYTHE" in made.output
+    assert "1 producers" in made.output
+
+
+def test_the_producers_page_on_an_empty_book(run):
+    run("init")
+    assert "nobody has ginned yet" in run("report", "producers").output
