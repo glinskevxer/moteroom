@@ -182,3 +182,51 @@ def test_a_lot_whose_tickets_were_voided_is_skipped(service):
 
 def test_the_producers_to_settle_come_off_the_live_tickets(service):
     assert service.settled_producers(SEASON) == ["BLYTHE", "MERRITT"]
+
+
+def test_freight_comes_off_the_statement(service):
+    from datetime import date as day
+
+    from moteroom.core.money import Money as Cash
+    from moteroom.receiving.freight import FreightLedger, Haul, Rate
+
+    ledger = FreightLedger(
+        [
+            Rate(
+                hauler="TRUXTON",
+                per_module=Cash.parse("42.00"),
+                per_mile=Cash.parse("3.10"),
+                minimum=Cash.parse("100.00"),
+            )
+        ]
+    )
+    ledger.haul(Haul("TRUXTON", day(2025, 10, 14), (1, 2), 18))
+    plain = service.build(SEASON, "BLYTHE")
+    hauled = service.build(SEASON, "BLYTHE", freight=ledger)
+    assert hauled.freight > Money.zero()
+    assert hauled.net == plain.net - hauled.freight
+
+
+def test_a_producer_who_hauled_their_own_has_no_freight(service):
+    assert service.build(SEASON, "BLYTHE").freight.is_zero
+
+
+def test_the_byproducts_come_back_onto_the_statement(service):
+    from datetime import date as day
+
+    from moteroom.ginning.byproduct import MOTES, ByproductLedger, Sale
+
+    ledger = ByproductLedger()
+    ledger.sell(Sale(MOTES, day(2025, 11, 4), Weight(24_000), Money.parse("180.00"), "MILL"))
+    plain = service.build(SEASON, "BLYTHE")
+    credited = service.build(SEASON, "BLYTHE", byproducts=ledger)
+    assert credited.byproduct_credit == Money.parse("1080.00")
+    assert credited.net == plain.net + credited.byproduct_credit
+
+
+def test_an_empty_byproduct_ledger_credits_nothing(service):
+    from moteroom.ginning.byproduct import ByproductLedger
+
+    assert service.build(
+        SEASON, "BLYTHE", byproducts=ByproductLedger()
+    ).byproduct_credit.is_zero

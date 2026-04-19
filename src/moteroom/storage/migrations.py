@@ -312,6 +312,14 @@ MIGRATIONS: tuple[Migration, ...] = (
             "CREATE INDEX cheques_by_payee ON cheques (season, payee)",
         ),
     ),
+    Migration(
+        version=11,
+        description="freight and byproduct credits on a settlement",
+        statements=(
+            "ALTER TABLE statements ADD COLUMN freight TEXT NOT NULL DEFAULT '0.00'",
+            "ALTER TABLE statements ADD COLUMN byproducts TEXT NOT NULL DEFAULT '0.00'",
+        ),
+    ),
 )
 
 LATEST = MIGRATIONS[-1].version

@@ -18,7 +18,10 @@ from moteroom.core.weight import Weight
 from moteroom.settlement.statement import Advance, Statement
 from moteroom.storage.repository import Repository
 
-COLUMNS = "season, producer, bales, lint, lint_proceeds, gin_charges, seed_credit, settled_on"
+COLUMNS = (
+    "season, producer, bales, lint, lint_proceeds, gin_charges, seed_credit, "
+    "freight, byproducts, settled_on"
+)
 
 
 class AdvanceRepository(Repository):
@@ -60,7 +63,7 @@ class StatementRepository(Repository):
 
     def save(self, statement: Statement, settled_on: date) -> None:
         self.write(
-            f"INSERT INTO statements ({COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            f"INSERT INTO statements ({COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 statement.season.year,
                 statement.producer,
@@ -69,6 +72,8 @@ class StatementRepository(Repository):
                 str(statement.lint_proceeds.amount),
                 str(statement.gin_charges.amount),
                 str(statement.seed_credit.amount),
+                str(statement.freight.amount),
+                str(statement.byproduct_credit.amount),
                 settled_on.isoformat(),
             ),
             lambda: ConflictError(
@@ -111,5 +116,7 @@ class StatementRepository(Repository):
             lint_proceeds=Money(Decimal(row["lint_proceeds"])),
             gin_charges=Money(Decimal(row["gin_charges"])),
             seed_credit=Money(Decimal(row["seed_credit"])),
+            freight=Money(Decimal(row["freight"])),
+            byproduct_credit=Money(Decimal(row["byproducts"])),
             advances=self.advances.for_producer(season, row["producer"]),
         )

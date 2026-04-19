@@ -1,8 +1,9 @@
 """The producer statement.
 
 One page per producer per season. Lint proceeds at the top, everything the gin
-is owed underneath, the seed credit, then whatever was advanced during the
-season, and a net at the bottom that is either a cheque or a bill. The lines
+is owed underneath, the seed and byproduct credits, the freight on their
+modules, then whatever was advanced during the season, and a net at the bottom
+that is either a cheque or a bill. The lines
 are kept in the order they print because a statement that adds up but reads in
 a different order every time is a statement nobody trusts.
 """
@@ -42,6 +43,8 @@ class Statement:
     lint_proceeds: Money
     gin_charges: Money
     seed_credit: Money
+    freight: Money = field(default_factory=Money.zero)
+    byproduct_credit: Money = field(default_factory=Money.zero)
     advances: tuple[Advance, ...] = field(default=())
 
     def __post_init__(self) -> None:
@@ -51,6 +54,8 @@ class Statement:
             raise ValidationError("bales", "must not be negative")
         if self.gin_charges.amount < 0:
             raise ValidationError("gin_charges", "is stated as a positive charge")
+        if self.freight.amount < 0:
+            raise ValidationError("freight", "is stated as a positive charge")
         references = [advance.reference for advance in self.advances]
         if len(set(references)) != len(references):
             raise ValidationError("advances", "names the same advance twice")
@@ -62,7 +67,8 @@ class Statement:
     @property
     def net(self) -> Money:
         """Positive is a cheque to the producer, negative is an invoice."""
-        return self.lint_proceeds + self.seed_credit - self.gin_charges - self.advanced
+        credits = self.lint_proceeds + self.seed_credit + self.byproduct_credit
+        return credits - self.gin_charges - self.freight - self.advanced
 
     @property
     def is_payable(self) -> bool:
@@ -73,6 +79,8 @@ class Statement:
             ("lint proceeds", self.lint_proceeds),
             ("gin charges", -self.gin_charges),
             ("seed credit", self.seed_credit),
+            ("byproducts", self.byproduct_credit),
+            ("freight", -self.freight),
         ]
         rows.extend(
             (f"advance {advance.reference}", -advance.amount) for advance in self.advances

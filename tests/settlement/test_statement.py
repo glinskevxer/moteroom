@@ -88,3 +88,23 @@ def test_an_advance_needs_a_reference():
 
 def test_a_statement_prints_its_summary():
     assert str(statement()) == "BLYTHE 2025/26 44 bales 10885.72 due"
+
+
+def test_freight_comes_off_and_byproducts_come_on():
+    made = statement(freight=Money.parse("250.00"), byproduct_credit=Money.parse("100.00"))
+    assert made.net == statement().net - Money.parse("150.00")
+    named = dict(made.lines())
+    assert named["freight"] == Money.parse("-250.00")
+    assert named["byproducts"] == Money.parse("100.00")
+
+
+def test_freight_is_stated_as_a_positive_charge():
+    with pytest.raises(ValidationError):
+        statement(freight=Money.parse("-1.00"))
+
+
+def test_the_lines_still_add_back_to_the_net_with_the_new_ones():
+    made = statement(freight=Money.parse("250.00"), byproduct_credit=Money.parse("100.00"))
+    rows = made.lines()
+    body = sum((amount.amount for _, amount in rows[:-1]), start=Money.zero().amount)
+    assert body == made.net.amount

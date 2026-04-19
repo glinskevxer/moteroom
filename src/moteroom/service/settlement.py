@@ -21,7 +21,9 @@ from moteroom.core.ids import LotId
 from moteroom.core.money import CentsPerPound, Money, total_money
 from moteroom.core.season import Season
 from moteroom.core.weight import Weight, total
+from moteroom.ginning.byproduct import ByproductLedger
 from moteroom.loan import pool
+from moteroom.receiving.freight import FreightLedger
 from moteroom.settlement.allocation import allocate, divide_count
 from moteroom.settlement.charges import bill
 from moteroom.settlement.seed import credit
@@ -107,8 +109,19 @@ class SettlementService:
             )
         return shares
 
-    def build(self, season: Season, producer: str) -> Statement:
-        """Work the whole statement out, advances and all."""
+    def build(
+        self,
+        season: Season,
+        producer: str,
+        freight: FreightLedger | None = None,
+        byproducts: ByproductLedger | None = None,
+    ) -> Statement:
+        """Work the whole statement out, advances and all.
+
+        Freight and byproducts are handed in rather than read, because both
+        are the plant's own arrangements and a producer who hauled their own
+        modules has no freight on their page at all.
+        """
         shares = self.shares_for(season, producer)
         if not shares:
             raise ValidationError("producer", f"{producer} has no cotton in {season}")
@@ -127,8 +140,31 @@ class SettlementService:
             lint_proceeds=total_money([share.proceeds for share in shares]),
             gin_charges=charges.total,
             seed_credit=seed_credit.net,
+            freight=self._freight(season, producer, freight),
+            byproduct_credit=self._byproducts(season, producer, byproducts),
             advances=self.advances.for_producer(season, producer),
         )
+
+    def _freight(self, season: Season, producer: str, ledger: FreightLedger | None) -> Money:
+        """What the hauling on this producer's own modules came to."""
+        if ledger is None:
+            return Money.zero()
+        tickets = [
+            one.number for one in self.tickets.book(season).live() if one.producer == producer
+        ]
+        return ledger.for_tickets(tickets)
+
+    def _byproducts(
+        self, season: Season, producer: str, ledger: ByproductLedger | None
+    ) -> Money:
+        """This producer's share of what the motes and gin trash made."""
+        if ledger is None or not len(ledger):
+            return Money.zero()
+        held = self.tickets.book(season)
+        volume = {code: held.net_for_producer(code) for code in held.producers()}
+        if not volume:
+            return Money.zero()
+        return ledger.allocate(volume).get(producer, Money.zero())
 
     def settled_producers(self, season: Season) -> list[str]:
         """Producers with live tickets, which is who there is to settle."""
