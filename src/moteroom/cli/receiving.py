@@ -16,7 +16,7 @@ from moteroom.core.errors import MoteroomError, ValidationError
 from moteroom.core.ids import ModuleId
 from moteroom.core.money import Money
 from moteroom.core.weight import Weight
-from moteroom.receiving.freight import FreightLedger, Haul, Rate
+from moteroom.receiving.freight import Haul, Rate
 from moteroom.receiving.scale import Certificate, ScaleBook
 from moteroom.receiving.ticket import ModuleTicket, clean_moisture
 from moteroom.receiving.yard import ModuleYard
@@ -315,23 +315,25 @@ def freight(
     numbers = tuple(int(part) for part in tickets.split(",") if part.strip().isdigit())
     if not numbers:
         raise ValidationError("tickets", "a load has to carry something")
-    ledger = FreightLedger(
-        [
-            Rate(
-                hauler=hauler.strip().upper(),
-                per_module=Money.parse(per_module),
-                per_mile=Money.parse(per_mile),
-                minimum=Money.parse(minimum),
-            )
-        ]
+    rate = Rate(
+        hauler=hauler.strip().upper(),
+        per_module=Money.parse(per_module),
+        per_mile=Money.parse(per_mile),
+        minimum=Money.parse(minimum),
     )
     load = Haul(
-        hauler=hauler.strip().upper(),
+        hauler=rate.hauler,
         hauled_on=read_date(on_text, session.season.start),
         tickets=numbers,
         miles=miles,
     )
-    charge = ledger.haul(load)
+    with session.writing() as repos:
+        if rate.hauler not in [one.hauler for one in repos.freight.rates(session.season)]:
+            repos.freight.post(session.season, rate)
+        repos.freight.haul(session.season, load)
+        ledger = repos.freight.ledger(session.season)
+        session.record("haul", rate.hauler, f"{load.modules} modules {load.miles} miles")
+    charge = load.charge(repos.freight.rate(session.season, rate.hauler))
     rows = [
         [str(ticket), str(amount)] for ticket, amount in sorted(ledger.per_ticket().items())
     ]

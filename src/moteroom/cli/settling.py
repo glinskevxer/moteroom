@@ -89,8 +89,14 @@ def advance(
 def preview(session: Session, producer: str) -> None:
     """Work a producer's settlement out without writing it down."""
     service = SettlementService(session.require_book(), posted_terms(session))
+    repos = session.open_repos()
     code = producer.strip().upper()
-    made = service.build(session.season, code)
+    made = service.build(
+        session.season,
+        code,
+        freight=repos.freight.ledger(session.season),
+        byproducts=repos.byproducts.ledger(session.season),
+    )
     click.echo(render_pairs(statement_lines(made)))
     shares = service.shares_for(session.season, code)
     rows = [
@@ -125,7 +131,12 @@ def run_settlement(session: Session, producer: str, on_text: str | None) -> None
     terms = posted_terms(session)
     code = producer.strip().upper()
     with session.writing() as repos:
-        made = SettlementService(book, terms).build(session.season, code)
+        made = SettlementService(book, terms).build(
+            session.season,
+            code,
+            freight=repos.freight.ledger(session.season),
+            byproducts=repos.byproducts.ledger(session.season),
+        )
         repos.statements.save(made, read_date(on_text, session.season.end))
         session.record("settle", code, f"{made.bales} bales, net {made.net}")
     verdict = "due" if made.is_payable else "owing"

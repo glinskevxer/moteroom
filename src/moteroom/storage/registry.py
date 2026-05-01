@@ -15,6 +15,7 @@ from moteroom.storage.audit import AuditRepository
 from moteroom.storage.cards import CardRepository
 from moteroom.storage.cheques import ChequeRepository
 from moteroom.storage.contracts import ContractRepository
+from moteroom.storage.freight import ByproductRepository, FreightRepository
 from moteroom.storage.lots import BaleRepository, LotRepository
 from moteroom.storage.producers import FarmRepository, ProducerRepository
 from moteroom.storage.rates import RatesRepository
@@ -44,6 +45,8 @@ class Repositories:
     rates: RatesRepository = field(init=False)
     audit: AuditRepository = field(init=False)
     cheques: ChequeRepository = field(init=False)
+    freight: FreightRepository = field(init=False)
+    byproducts: ByproductRepository = field(init=False)
 
     def __post_init__(self) -> None:
         self.producers = ProducerRepository(self.connection)
@@ -61,6 +64,8 @@ class Repositories:
         self.rates = RatesRepository(self.connection)
         self.audit = AuditRepository(self.connection)
         self.cheques = ChequeRepository(self.connection)
+        self.freight = FreightRepository(self.connection)
+        self.byproducts = ByproductRepository(self.connection)
 
     def names(self) -> list[str]:
         """What the registry holds, which the wiring gate reads."""

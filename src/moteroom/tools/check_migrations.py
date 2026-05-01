@@ -40,6 +40,10 @@ EXPECTED_TABLES = {
     "deliveries",
     "audit",
     "cheques",
+    "haulers",
+    "hauls",
+    "haul_tickets",
+    "byproduct_sales",
 }
 
 

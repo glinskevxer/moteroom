@@ -232,6 +232,8 @@ def test_the_export_prints_when_there_is_nowhere_to_write(seeded):
 
 
 def test_a_load_prices_and_shares_over_its_modules(seeded):
+    for module in ("HW-004182", "HW-004183", "HW-004184"):
+        weigh(seeded, module=module, on="2025-10-14")
     made = seeded("ticket", "freight", "truxton", "1,2,3", "18", "--on", "2025-10-14")
     assert made.exit_code == 0
     assert "3 modules 18 miles" in made.output
@@ -240,6 +242,8 @@ def test_a_load_prices_and_shares_over_its_modules(seeded):
 
 
 def test_a_long_run_is_bound_by_the_mileage(seeded):
+    for module in ("HW-004182", "HW-004183", "HW-004184"):
+        weigh(seeded, module=module, on="2025-10-14")
     made = seeded("ticket", "freight", "TRUXTON", "1,2,3", "120", "--on", "2025-10-14")
     assert "on the mileage" in made.output
 
@@ -249,4 +253,17 @@ def test_a_load_carrying_nothing_is_refused(seeded):
 
 
 def test_a_run_off_the_map_is_refused(seeded):
+    weigh(seeded, on="2025-10-14")
     assert seeded("ticket", "freight", "TRUXTON", "1", "900").exit_code != 0
+
+
+def test_a_load_naming_a_module_nobody_weighed_is_refused(seeded):
+    assert (
+        seeded("ticket", "freight", "TRUXTON", "9", "18", "--on", "2025-10-14").exit_code != 0
+    )
+
+
+def test_the_freight_stays_in_the_book(seeded):
+    weigh(seeded, on="2025-10-14")
+    seeded("ticket", "freight", "TRUXTON", "1", "18", "--on", "2025-10-14")
+    assert "haul" in seeded("audit", "list").output

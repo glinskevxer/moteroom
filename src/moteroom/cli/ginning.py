@@ -18,7 +18,7 @@ from moteroom.core.errors import ConflictError, ValidationError
 from moteroom.core.ids import LotId
 from moteroom.core.money import Money
 from moteroom.core.weight import Weight, total
-from moteroom.ginning.byproduct import KINDS, ByproductLedger, Sale
+from moteroom.ginning.byproduct import KINDS, Sale
 from moteroom.ginning.drying import Setting, recommended, settings_for
 from moteroom.ginning.plant import Shift, ShiftLog, Stoppage
 from moteroom.ginning.reconcile import reconcile
@@ -229,8 +229,10 @@ def byproduct(
         price_per_ton=-rate if disposal else rate,
         buyer=buyer.strip().upper(),
     )
-    ledger = ByproductLedger()
-    ledger.sell(made)
+    with session.writing() as repos:
+        repos.byproducts.sell(session.season, made)
+        session.record("byproduct", made.kind, str(made))
+    ledger = session.open_repos().byproducts.ledger(session.season)
     held = session.open_repos().tickets.book(session.season)
     volume = {code: held.net_for_producer(code) for code in held.producers()}
     click.echo(str(made))

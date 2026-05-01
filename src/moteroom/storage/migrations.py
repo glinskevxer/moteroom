@@ -320,6 +320,54 @@ MIGRATIONS: tuple[Migration, ...] = (
             "ALTER TABLE statements ADD COLUMN byproducts TEXT NOT NULL DEFAULT '0.00'",
         ),
     ),
+    Migration(
+        version=12,
+        description="hauliers, the loads they brought and what the byproducts sold for",
+        statements=(
+            """
+            CREATE TABLE haulers (
+                season      INTEGER NOT NULL,
+                hauler      TEXT NOT NULL,
+                per_module  TEXT NOT NULL,
+                per_mile    TEXT NOT NULL,
+                minimum     TEXT NOT NULL,
+                PRIMARY KEY (season, hauler)
+            )
+            """,
+            """
+            CREATE TABLE hauls (
+                id          INTEGER PRIMARY KEY,
+                season      INTEGER NOT NULL,
+                hauler      TEXT NOT NULL,
+                hauled_on   TEXT NOT NULL,
+                miles       INTEGER NOT NULL,
+                FOREIGN KEY (season, hauler) REFERENCES haulers(season, hauler)
+            )
+            """,
+            """
+            CREATE TABLE haul_tickets (
+                haul        INTEGER NOT NULL REFERENCES hauls(id),
+                season      INTEGER NOT NULL,
+                ticket      INTEGER NOT NULL,
+                PRIMARY KEY (haul, ticket),
+                FOREIGN KEY (season, ticket) REFERENCES tickets(season, number)
+            )
+            """,
+            """
+            CREATE TABLE byproduct_sales (
+                id            INTEGER PRIMARY KEY,
+                season        INTEGER NOT NULL,
+                kind          TEXT NOT NULL,
+                sold_on       TEXT NOT NULL,
+                weight        INTEGER NOT NULL,
+                price_per_ton TEXT NOT NULL,
+                buyer         TEXT NOT NULL
+            )
+            """,
+            "CREATE INDEX hauls_by_season ON hauls (season, hauled_on)",
+            "CREATE INDEX sales_by_season ON byproduct_sales (season, sold_on)",
+        ),
+    ),
 )
 
 LATEST = MIGRATIONS[-1].version
