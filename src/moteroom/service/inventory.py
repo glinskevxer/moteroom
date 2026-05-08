@@ -96,9 +96,9 @@ def take(book: Book, season: Season) -> Inventory:
         elif receipt is not None:
             where, detail = IN_STORE, f"receipt {receipt.number} at {receipt.warehouse}"
         else:
-            released = _released(receipts, key)
+            released = receipts.last_released(one.bale_id)
             if released is not None:
-                where, detail = SHIPPED, f"receipt {released} released"
+                where, detail = SHIPPED, f"receipt {released.number} released"
             else:
                 where, detail = AT_THE_GIN, "no receipt"
         placements.append(Placement(one.bale_id, one.net, where, detail))
@@ -109,13 +109,3 @@ def take(book: Book, season: Season) -> Inventory:
                 (receipt.number, "is a receipt against a bale this gin never pressed")
             )
     return Inventory(tuple(placements), tuple(orphans))
-
-
-def _released(receipts: ReceiptRepository, bale_id: str) -> str | None:
-    for receipt in receipts.rows(
-        "SELECT number FROM receipts WHERE bale_id = ? AND released_on IS NOT NULL "
-        "ORDER BY released_on DESC",
-        (bale_id,),
-    ):
-        return str(receipt["number"])
-    return None

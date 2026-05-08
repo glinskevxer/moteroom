@@ -73,6 +73,21 @@ class ReceiptRepository(Repository):
         ).fetchone()
         return None if row is None else self._read(row)
 
+    def last_released(self, bale_id: BaleId) -> Receipt | None:
+        """The most recent released receipt on a bale, if there is one.
+
+        A bale that has left store has no live receipt, and the question of
+        where it went is answered by the receipt that was released rather than
+        by its absence.
+        """
+        row = self.one(
+            f"SELECT {RECEIPT_COLUMNS} FROM receipts "
+            "WHERE bale_id = ? AND released_on IS NOT NULL "
+            "ORDER BY released_on DESC, number DESC",
+            (str(bale_id),),
+        )
+        return None if row is None else self._read(row)
+
     def outstanding(self, warehouse: str | None = None) -> list[Receipt]:
         if warehouse is None:
             rows = self.connection.execute(

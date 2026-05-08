@@ -172,3 +172,20 @@ def test_an_order_naming_a_receipt_nobody_issued_is_refused(book):
 def test_an_order_nobody_wrote(book):
     with pytest.raises(NotFoundError):
         OrderRepository(book.connection).get("SO000141")
+
+
+def test_a_released_receipt_can_still_be_found_for_its_bale(book):
+    receipts = ReceiptRepository(book.connection)
+    receipts.issue(receipt(1))
+    tag = BaleId.build(SEASON, GIN, 1)
+    assert receipts.last_released(tag) is None
+    receipts.release("MW00000001", date(2026, 1, 12), "CALCOT")
+    found = receipts.last_released(tag)
+    assert found is not None
+    assert found.number == "MW00000001"
+
+
+def test_a_bale_that_never_left_has_no_released_receipt(book):
+    receipts = ReceiptRepository(book.connection)
+    receipts.issue(receipt(1))
+    assert receipts.last_released(BaleId.build(SEASON, GIN, 2)) is None
