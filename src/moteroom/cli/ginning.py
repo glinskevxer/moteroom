@@ -20,6 +20,7 @@ from moteroom.core.money import Money
 from moteroom.core.weight import Weight, total
 from moteroom.ginning.byproduct import KINDS, Sale
 from moteroom.ginning.drying import Setting, recommended, settings_for
+from moteroom.ginning.energy import EnergyLog, Reading
 from moteroom.ginning.plant import Shift, ShiftLog, Stoppage
 from moteroom.ginning.reconcile import reconcile
 from moteroom.ginning.run import GinRun
@@ -268,3 +269,47 @@ def driers(moisture: str, first: int | None, second: int | None) -> None:
     )
     for warning in made.warnings():
         click.echo(f"  {warning}")
+
+
+@lot.command("energy")
+@click.argument("bales", type=int)
+@click.argument("kilowatt_hours", type=int)
+@click.argument("therms", type=int)
+@click.option("--moisture", default="9.4", show_default=True, help="Moisture that came in.")
+@click.option("--power", default="0.11", show_default=True, help="Rate for a kilowatt hour.")
+@click.option("--gas", default="0.95", show_default=True, help="Rate for a therm.")
+@on_option("Meter date")
+@click.pass_obj
+def energy(
+    session: Session,
+    bales: int,
+    kilowatt_hours: int,
+    therms: int,
+    moisture: str,
+    power: str,
+    gas: str,
+    on_text: str | None,
+) -> None:
+    """Work out what a day at the plant cost in power and gas."""
+    made = Reading(
+        day=read_date(on_text, session.season.start),
+        bales=bales,
+        kilowatt_hours=kilowatt_hours,
+        therms=therms,
+        moisture=Decimal(moisture),
+    )
+    log = EnergyLog()
+    log.add(made)
+    power_rate, gas_rate = Money.parse(power), Money.parse(gas)
+    click.echo(
+        render_pairs(
+            [
+                ("day", made.day.isoformat()),
+                ("bales", str(made.bales)),
+                ("power a bale", f"{made.power_per_bale()} kWh"),
+                ("gas a bale", f"{made.gas_per_bale()} therms"),
+                ("cost", str(made.cost(power_rate, gas_rate))),
+                ("cost a bale", str(log.cost_per_bale(power_rate, gas_rate))),
+            ]
+        )
+    )

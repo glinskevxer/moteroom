@@ -182,3 +182,18 @@ def test_a_trim_stage_running_hot_is_flagged(ginned):
 
 def test_a_temperature_off_the_dial_is_refused(ginned):
     assert ginned("lot", "driers", "12.0", "--first", "400", "--second", "200").exit_code != 0
+
+
+def test_a_day_at_the_plant_prices_itself(ginned):
+    made = ginned("lot", "energy", "360", "12600", "540", "--on", "2025-10-16")
+    assert made.exit_code == 0
+    assert "power a bale  35.000 kWh" in made.output
+    assert "cost a bale" in made.output
+
+
+def test_a_day_that_made_nothing_and_burned_something(ginned):
+    assert ginned("lot", "energy", "0", "12600", "540").exit_code != 0
+
+
+def test_a_negative_meter_is_refused(ginned):
+    assert ginned("lot", "energy", "360", "-1", "540").exit_code != 0

@@ -33,6 +33,7 @@ Generated from the classes that define these words. Run
 | `Deferral` | `settlement.deferred` | One agreement to hold a producer's money until a named day. |
 | `DeferralBook` | `settlement.deferred` | Every deferral the gin has agreed to. |
 | `Delivery` | `press.tare` | One lot of wrap arriving at the plant. |
+| `EnergyLog` | `ginning.energy` | Every day's meters this season. |
 | `EquityLedger` | `settlement.equity` | Equity by member and by year, and the fund that revolves it out. |
 | `Exposure` | `warehouse.insurance` | What is in store, what it is worth, and what the policy would pay. |
 | `Extraneous` | `classing.defect` | One finding: what it was and how much of it. |
@@ -66,6 +67,7 @@ Generated from the classes that define these words. Run
 | `Producer` | `receiving.party` | A grower the gin writes cheques to. |
 | `Rate` | `receiving.freight` | What one hauler charges. |
 | `RateBreakdown` | `loan.value` | Every line that moved the rate, in the order the office reads them. |
+| `Reading` | `ginning.energy` | One day's meters, against the cotton that went through. |
 | `Receipt` | `warehouse.receipt` | One bale in store, and who holds the paper on it. |
 | `ReceiptRegister` | `warehouse.register` | Every receipt this house has issued, outstanding or not. |
 | `Reconciliation` | `ginning.reconcile` | What the lot sheet and the press each said, and by how much they differ. |
