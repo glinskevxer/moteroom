@@ -37,6 +37,7 @@ RENAMED = {
     "moteroom.reporting.settlement": "tests/reporting/test_settlement_report.py",
     "moteroom.reporting.season": "tests/reporting/test_season_report.py",
     "moteroom.cli.trail": "tests/cli/test_trail.py",
+    "moteroom.reporting.freight": "tests/reporting/test_freight_report.py",
 }
 
 

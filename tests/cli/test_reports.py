@@ -242,3 +242,15 @@ def test_the_producers_page_reads_off_the_book(worked):
 def test_the_producers_page_on_an_empty_book(run):
     run("init")
     assert "nobody has ginned yet" in run("report", "producers").output
+
+
+def test_the_freight_page_reads_off_the_book(worked):
+    worked("ticket", "freight", "TRUXTON", "1", "18", "--on", "2025-10-14")
+    by_hauler = worked("report", "freight")
+    assert "TRUXTON" in by_hauler.output
+    by_producer = worked("report", "freight", "--by", "producer")
+    assert "BLYTHE" in by_producer.output
+
+
+def test_the_freight_page_on_a_season_nobody_hauled(worked):
+    assert "nothing hauled yet" in worked("report", "freight").output
