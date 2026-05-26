@@ -27,7 +27,7 @@ One producer, one module, one lot, one bale. Every line below is what the
 command actually prints, and a test replays the whole thing to keep it that way.
 
     $ moteroom init
-    created season.sqlite3 at schema 12
+    created season.sqlite3 at schema 13
 
     $ moteroom setting set gin_code 41207
     gin_code is 41207

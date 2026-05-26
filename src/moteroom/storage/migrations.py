@@ -368,6 +368,21 @@ MIGRATIONS: tuple[Migration, ...] = (
             "CREATE INDEX sales_by_season ON byproduct_sales (season, sold_on)",
         ),
     ),
+    Migration(
+        version=13,
+        description="an index behind every foreign key",
+        statements=(
+            "CREATE INDEX tickets_producer ON tickets (producer)",
+            "CREATE INDEX farms_producer ON farms (producer)",
+            "CREATE INDEX advances_producer ON advances (producer)",
+            "CREATE INDEX statements_producer ON statements (producer)",
+            "CREATE INDEX cheques_payee ON cheques (payee)",
+            "CREATE INDEX lot_tickets_ticket ON lot_tickets (season, ticket)",
+            "CREATE INDEX haul_tickets_ticket ON haul_tickets (season, ticket)",
+            "CREATE INDEX hauls_hauler ON hauls (season, hauler)",
+            "CREATE INDEX order_receipts_receipt ON order_receipts (receipt)",
+        ),
+    ),
 )
 
 LATEST = MIGRATIONS[-1].version
