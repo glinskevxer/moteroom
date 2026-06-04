@@ -13,13 +13,14 @@ from datetime import date
 import click
 
 from moteroom.cli.context import Session
-from moteroom.cli.options import on_option, read_date, read_decimal
+from moteroom.cli.options import as_of_option, on_option, read_date, read_decimal
 from moteroom.cli.output import render_pairs, render_table
 from moteroom.core.money import Money
 from moteroom.service.settlement import SettlementService
 from moteroom.settlement.cheque import Cheque
 from moteroom.settlement.deferred import Deferral, DeferralBook
 from moteroom.settlement.equity import allocate_margin
+from moteroom.settlement.late import Account
 from moteroom.settlement.statement import Advance, Statement
 from moteroom.settlement.terms import Terms
 from moteroom.storage.rates import default_terms
@@ -295,6 +296,50 @@ def defer(
                 ("rate", f"{made.rate}%"),
                 ("interest", str(made.interest(made.pay_on))),
                 ("due", str(made.due(made.pay_on))),
+            ]
+        )
+    )
+
+
+@settle.command("owing")
+@click.argument("producer")
+@click.option("--amount", default=None, help="What is owed, or the settled net.")
+@click.option("--rate", default="9.00", show_default=True, help="Interest once it falls due.")
+@click.option("--grace", type=int, default=30, show_default=True, help="Days before interest.")
+@as_of_option("Date to price it at")
+@on_option("Billing date")
+@click.pass_obj
+def owing(
+    session: Session,
+    producer: str,
+    amount: str | None,
+    rate: str,
+    grace: int,
+    as_of: str | None,
+    on_text: str | None,
+) -> None:
+    """Price what a producer owes the gin, interest and all."""
+    repos = session.open_repos()
+    code = producer.strip().upper()
+    owed = Money.parse(amount) if amount else -repos.statements.get(session.season, code).net
+    made = Account(
+        producer=code,
+        owed=owed,
+        billed_on=read_date(on_text, session.season.end),
+        rate=read_decimal(rate, "rate"),
+        grace_days=grace,
+    )
+    when = read_date(as_of, made.billed_on)
+    click.echo(
+        render_pairs(
+            [
+                ("producer", made.producer),
+                ("owed", str(made.owed)),
+                ("billed", made.billed_on.isoformat()),
+                ("falls due", made.due_on.isoformat()),
+                ("days late", str(made.days_late(when))),
+                ("interest", str(made.interest(when))),
+                ("to clear it", str(made.due(when))),
             ]
         )
     )

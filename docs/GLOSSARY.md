@@ -5,6 +5,7 @@ Generated from the classes that define these words. Run
 
 | term | where | what it is |
 | --- | --- | --- |
+| `Account` | `settlement.late` | One producer who owes the gin at the end of a season. |
 | `Acknowledgement` | `warehouse.ewr` | What the provider said about a transfer. |
 | `Advance` | `settlement.statement` | Money paid out before the settlement, which comes back off it. |
 | `Allocation` | `settlement.allocation` | What each producer put in and what they get out. |

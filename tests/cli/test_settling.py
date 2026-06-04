@@ -200,3 +200,46 @@ def test_a_rate_that_will_not_read(ginned):
         ginned("settle", "defer", "BLYTHE", "100.00", "2026-01-15", "--rate", "lots").exit_code
         != 0
     )
+
+
+def test_an_owing_account_prices_its_interest(ginned):
+    made = ginned(
+        "settle",
+        "owing",
+        "blythe",
+        "--amount",
+        "4000.00",
+        "--on",
+        "2026-02-03",
+        "--as-of",
+        "2026-04-05",
+    )
+    assert made.exit_code == 0
+    assert "days late    31" in made.output
+    assert "to clear it" in made.output
+
+
+def test_an_owing_account_inside_the_grace_period(ginned):
+    made = ginned(
+        "settle",
+        "owing",
+        "BLYTHE",
+        "--amount",
+        "4000.00",
+        "--on",
+        "2026-02-03",
+        "--as-of",
+        "2026-02-20",
+    )
+    assert "days late    0" in made.output
+    assert "$0.00" in made.output
+
+
+def test_an_owing_account_off_a_settlement_that_paid_out(ginned):
+    ginned("settle", "rates")
+    ginned("settle", "run", "BLYTHE", "--on", "2026-02-03")
+    assert ginned("settle", "owing", "BLYTHE").exit_code != 0
+
+
+def test_an_owing_account_for_a_producer_nobody_settled(ginned):
+    assert ginned("settle", "owing", "MERRITT").exit_code != 0
