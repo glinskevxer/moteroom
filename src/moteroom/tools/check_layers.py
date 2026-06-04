@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import ast
 
-from moteroom.tools.gate import Finding, module_name, report, source_files
+from moteroom.tools.gate import Finding, module_name, run_gate, source_files
 
 CORE = {"core"}
 DOMAIN = {"receiving", "ginning", "press", "classing", "loan", "warehouse", "settlement"}
@@ -80,8 +80,7 @@ def run() -> tuple[list[Finding], int]:
 
 def main() -> int:
     """Run the gate and give back a shell exit status."""
-    findings, checked = run()
-    return report("check_layers", findings, checked)
+    return run_gate("check_layers", run)
 
 
 if __name__ == "__main__":

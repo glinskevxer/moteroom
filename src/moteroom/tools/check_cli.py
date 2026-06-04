@@ -14,7 +14,7 @@ from __future__ import annotations
 import click
 
 from moteroom.cli.main import main
-from moteroom.tools.gate import Finding, report
+from moteroom.tools.gate import Finding, run_gate
 
 MIN_HELP_WORDS = 2
 EXEMPT_OPTIONS = {"--help", "--version"}
@@ -65,8 +65,7 @@ def run() -> tuple[list[Finding], int]:
 
 def main_gate() -> int:
     """Run the gate and give back a shell exit status."""
-    findings, checked = run()
-    return report("check_cli", findings, checked)
+    return run_gate("check_cli", run)
 
 
 if __name__ == "__main__":

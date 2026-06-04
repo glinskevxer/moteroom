@@ -7,13 +7,15 @@ runs to clear as there are problems.
 
 from __future__ import annotations
 
-import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
 PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 REPO_ROOT = PACKAGE_ROOT.parent.parent
+
+
+Gate = Callable[[], tuple[list["Finding"], int]]
 
 
 @dataclass(frozen=True)
@@ -54,14 +56,14 @@ def report(name: str, findings: Sequence[Finding], checked: int) -> int:
     return 0
 
 
-def main_for(name: str, gate: object) -> int:
-    """Run a gate function and report it, which is what every module's main does."""
+def run_gate(name: str, gate: Gate) -> int:
+    """Run a gate and report it, which is what every gate module's main does.
+
+    Ten modules were each ending in the same four lines. The four lines are not
+    a decision any of them gets to make, so they are made here and each module
+    says only what it checks.
+    """
     if not callable(gate):
         raise TypeError("a gate has to be callable")
     findings, checked = gate()
     return report(name, findings, checked)
-
-
-def exit_with(status: int) -> None:
-    """Leave with a status, which is all a gate module does at the end."""
-    sys.exit(status)

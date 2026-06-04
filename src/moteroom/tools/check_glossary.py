@@ -15,7 +15,7 @@ import ast
 import sys
 from pathlib import Path
 
-from moteroom.tools.gate import PACKAGE_ROOT, REPO_ROOT, Finding, module_name, report
+from moteroom.tools.gate import PACKAGE_ROOT, REPO_ROOT, Finding, module_name, run_gate
 
 GLOSSARY = REPO_ROOT / "docs" / "GLOSSARY.md"
 PACKAGES = (
@@ -87,8 +87,7 @@ def main() -> int:
     if "--write" in sys.argv[1:]:
         print(f"wrote {write()}")
         return 0
-    findings, checked = run()
-    return report("check_glossary", findings, checked)
+    return run_gate("check_glossary", run)
 
 
 if __name__ == "__main__":

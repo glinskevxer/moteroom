@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import sqlite3
 
-from moteroom.tools.gate import Finding, report
+from moteroom.tools.gate import Finding, run_gate
 
 EXEMPT: set[tuple[str, str]] = set()
 
@@ -86,8 +86,7 @@ def run() -> tuple[list[Finding], int]:
 
 def main() -> int:
     """Run the gate and give back a shell exit status."""
-    findings, checked = run()
-    return report("check_indexes", findings, checked)
+    return run_gate("check_indexes", run)
 
 
 if __name__ == "__main__":

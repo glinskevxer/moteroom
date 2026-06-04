@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import ast
 
-from moteroom.tools.gate import Finding, module_name, report, source_files
+from moteroom.tools.gate import Finding, module_name, run_gate, source_files
 
 ALLOWED_PACKAGE = "storage"
 KEYWORDS = ("SELECT ", "INSERT INTO", "UPDATE ", "DELETE FROM", "CREATE TABLE", "PRAGMA ")
@@ -68,8 +68,7 @@ def run() -> tuple[list[Finding], int]:
 
 def main() -> int:
     """Run the gate and give back a shell exit status."""
-    findings, checked = run()
-    return report("check_sql", findings, checked)
+    return run_gate("check_sql", run)
 
 
 if __name__ == "__main__":

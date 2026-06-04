@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from moteroom.tools.gate import PACKAGE_ROOT, REPO_ROOT, Finding, module_name, report
+from moteroom.tools.gate import PACKAGE_ROOT, REPO_ROOT, Finding, module_name, run_gate
 
 TESTS = REPO_ROOT / "tests"
 EXEMPT = {
@@ -80,8 +80,7 @@ def run() -> tuple[list[Finding], int]:
 
 def main() -> int:
     """Run the gate and give back a shell exit status."""
-    findings, checked = run()
-    return report("check_tests", findings, checked)
+    return run_gate("check_tests", run)
 
 
 if __name__ == "__main__":

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import ast
 
-from moteroom.tools.gate import Finding, module_name, report, source_files
+from moteroom.tools.gate import Finding, module_name, run_gate, source_files
 
 ENTRY_POINTS = {"moteroom", "moteroom.cli.main"}
 
@@ -106,8 +106,7 @@ def run() -> tuple[list[Finding], int]:
 
 def main() -> int:
     """Run the gate and give back a shell exit status."""
-    findings, checked = run()
-    return report("check_wiring", findings, checked)
+    return run_gate("check_wiring", run)
 
 
 if __name__ == "__main__":

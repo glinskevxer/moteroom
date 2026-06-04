@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from moteroom.tools.gate import REPO_ROOT, Finding, report
+from moteroom.tools.gate import REPO_ROOT, Finding, run_gate
 
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "ci.yml"
 PYTHON_VERSIONS = ("3.12", "3.13")
@@ -55,8 +55,7 @@ def _named_gates(text: str) -> list[str]:
 
 def main() -> int:
     """Run the gate and give back a shell exit status."""
-    findings, checked = run()
-    return report("check_workflow", findings, checked)
+    return run_gate("check_workflow", run)
 
 
 if __name__ == "__main__":

@@ -5,9 +5,9 @@ import pytest
 from moteroom.tools.gate import (
     PACKAGE_ROOT,
     Finding,
-    main_for,
     module_name,
     report,
+    run_gate,
     source_files,
 )
 
@@ -42,11 +42,11 @@ def test_a_gate_with_findings_lists_them(capsys):
     assert "a: b" in printed
 
 
-def test_main_for_runs_a_gate():
-    assert main_for("gate", lambda: ([], 3)) == 0
-    assert main_for("gate", lambda: ([Finding("a", "b")], 3)) == 1
+def test_running_a_gate_reports_it():
+    assert run_gate("gate", lambda: ([], 3)) == 0
+    assert run_gate("gate", lambda: ([Finding("a", "b")], 3)) == 1
 
 
-def test_main_for_refuses_something_that_is_not_a_gate():
+def test_running_something_that_is_not_a_gate():
     with pytest.raises(TypeError):
-        main_for("gate", "not a gate")
+        run_gate("gate", "not a gate")  # type: ignore[arg-type]

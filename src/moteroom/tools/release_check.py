@@ -12,7 +12,7 @@ import re
 import tomllib
 
 from moteroom import __version__
-from moteroom.tools.gate import PACKAGE_ROOT, REPO_ROOT, Finding, report
+from moteroom.tools.gate import PACKAGE_ROOT, REPO_ROOT, Finding, run_gate
 
 PYPROJECT = REPO_ROOT / "pyproject.toml"
 CHANGELOG = REPO_ROOT / "CHANGELOG.md"
@@ -64,8 +64,7 @@ def run() -> tuple[list[Finding], int]:
 
 def main() -> int:
     """Run the gate and give back a shell exit status."""
-    findings, checked = run()
-    return report("release_check", findings, checked)
+    return run_gate("release_check", run)
 
 
 if __name__ == "__main__":

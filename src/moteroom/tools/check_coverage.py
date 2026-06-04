@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from moteroom.tools.gate import REPO_ROOT, Finding, report
+from moteroom.tools.gate import REPO_ROOT, Finding, run_gate
 
 REPORT = REPO_ROOT / "coverage.json"
 
@@ -86,8 +86,7 @@ def run() -> tuple[list[Finding], int]:
 
 def main() -> int:
     """Run the gate and give back a shell exit status."""
-    findings, checked = run()
-    return report("check_coverage", findings, checked)
+    return run_gate("check_coverage", run)
 
 
 if __name__ == "__main__":

@@ -18,7 +18,7 @@ from moteroom.storage.migrations import (
     current_version,
     migrate,
 )
-from moteroom.tools.gate import Finding, report
+from moteroom.tools.gate import Finding, run_gate
 
 EXPECTED_TABLES = {
     "producers",
@@ -88,8 +88,7 @@ def run() -> tuple[list[Finding], int]:
 
 def main() -> int:
     """Run the gate and give back a shell exit status."""
-    findings, checked = run()
-    return report("check_migrations", findings, checked)
+    return run_gate("check_migrations", run)
 
 
 if __name__ == "__main__":
