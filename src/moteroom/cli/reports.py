@@ -23,6 +23,7 @@ from moteroom.core.weight import total
 from moteroom.ginning.reconcile import reconcile
 from moteroom.loan import pool
 from moteroom.receiving.yard import ModuleYard
+from moteroom.reporting import cash as cash_report
 from moteroom.reporting import daily, exceptions, ladder, position, quality
 from moteroom.reporting import freight as freight_report
 from moteroom.reporting import producers as producer_report
@@ -338,3 +339,18 @@ def freight_by(session: Session, grouping: str, csv_out: bool) -> None:
         emit(freight_report.by_hauler(ledger), csv_out)
         return
     emit(freight_report.by_producer(ledger, repos.tickets.book(session.season).live()), csv_out)
+
+
+@report.command("cash")
+@as_of_option("Position date")
+@csv_option
+@click.pass_obj
+def cash_position(session: Session, as_of: str | None, csv_out: bool) -> None:
+    """What the gin owes and what it is owed."""
+    repos = session.open_repos()
+    when = read_date(as_of, date.today())
+    register = repos.cheques.register(session.season)
+    emit(
+        cash_report.position(register.cheques(), [], [], Money.zero(), when),
+        csv_out,
+    )

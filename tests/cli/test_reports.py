@@ -254,3 +254,16 @@ def test_the_freight_page_reads_off_the_book(worked):
 
 def test_the_freight_page_on_a_season_nobody_hauled(worked):
     assert "nothing hauled yet" in worked("report", "freight").output
+
+
+def test_the_cash_page_reads_off_the_register(worked):
+    worked("settle", "cheque", "BLYTHE", "--amount", "500.00", "--on", "2026-02-03")
+    made = worked("report", "cash", "--as-of", "2026-03-01")
+    assert made.exit_code == 0
+    assert "cheques outstanding" in made.output
+    assert "$500.00" in made.output
+
+
+def test_the_cash_page_on_a_book_with_nothing_written(worked):
+    made = worked("report", "cash", "--as-of", "2026-03-01")
+    assert "nothing needs chasing" in made.output
