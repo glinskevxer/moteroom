@@ -176,6 +176,18 @@ def look_over(session: Session, as_of: str | None) -> None:
         raise SystemExit(1)
 
 
+@main.command("seasons")
+@click.pass_obj
+def list_seasons(session: Session) -> None:
+    """Every season this book holds and how much of each."""
+    repos = session.open_repos()
+    for held in repos.seasons.all():
+        marker = "*" if held.season == session.season else " "
+        click.echo(f"{marker} {held}")
+    if not repos.seasons.years():
+        click.echo("nothing in this book yet")
+
+
 @main.command("close")
 @click.pass_obj
 def close(session: Session) -> None:

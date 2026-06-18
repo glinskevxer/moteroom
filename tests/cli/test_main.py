@@ -317,3 +317,36 @@ def test_the_doctor_reads_fine_once_the_book_is_set_up(runner, tmp_path):
 def test_the_doctor_needs_a_book(runner, tmp_path):
     result = runner.invoke(main, ["--book", str(tmp_path / "none.sqlite3"), "doctor"])
     assert result.exit_code != 0
+
+
+def test_the_seasons_command_lists_what_the_book_holds(runner, tmp_path):
+    path = tmp_path / "gin.sqlite3"
+    for season, weighed in (("2024", "2024-10-14"), ("2025", "2025-10-14")):
+        base = ["--book", str(path), "--season", season]
+        runner.invoke(main, [*base, "producer", "add", "BLYTHE", "Blythe Farms"])
+        runner.invoke(
+            main,
+            [
+                *base,
+                "ticket",
+                "weigh",
+                f"HW-{season}",
+                "BLYTHE",
+                "3312",
+                "38400",
+                "17200",
+                "--on",
+                weighed,
+            ],
+        )
+    result = runner.invoke(main, ["--book", str(path), "--season", "2025", "seasons"])
+    assert result.exit_code == 0
+    assert "2024/25" in result.output
+    assert "* 2025/26" in result.output
+
+
+def test_the_seasons_command_on_an_empty_book(runner, tmp_path):
+    path = tmp_path / "season.sqlite3"
+    runner.invoke(main, ["--book", str(path), "init"])
+    result = runner.invoke(main, ["--book", str(path), "seasons"])
+    assert "nothing in this book yet" in result.output
