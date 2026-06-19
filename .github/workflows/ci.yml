@@ -51,6 +51,7 @@ jobs:
       - run: python -m moteroom.tools.check_tests
       - run: python -m moteroom.tools.check_sql
       - run: python -m moteroom.tools.check_indexes
+      - run: python -m moteroom.tools.check_architecture
       - run: python -m moteroom.tools.check_workflow
       - run: python -m moteroom.tools.release_check
 
