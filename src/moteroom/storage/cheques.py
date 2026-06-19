@@ -4,12 +4,11 @@ from __future__ import annotations
 
 import sqlite3
 from datetime import date
-from decimal import Decimal
 
 from moteroom.core.errors import ConflictError, NotFoundError
-from moteroom.core.money import Money
 from moteroom.core.season import Season
 from moteroom.settlement.cheque import Cheque, Register
+from moteroom.storage import rows as read
 from moteroom.storage.repository import Repository
 
 COLUMNS = "number, season, payee, amount, issued_on, cleared_on, voided_on, void_reason"
@@ -78,14 +77,12 @@ class ChequeRepository(Repository):
 
 
 def _cheque(row: sqlite3.Row) -> Cheque:
-    cleared = row["cleared_on"]
-    voided = row["voided_on"]
     return Cheque(
         number=row["number"],
         payee=row["payee"],
-        amount=Money(Decimal(row["amount"])),
-        issued_on=date.fromisoformat(row["issued_on"]),
-        cleared_on=None if cleared is None else date.fromisoformat(cleared),
-        voided_on=None if voided is None else date.fromisoformat(voided),
+        amount=read.money(row, "amount"),
+        issued_on=read.day(row, "issued_on"),
+        cleared_on=read.maybe_day(row, "cleared_on"),
+        voided_on=read.maybe_day(row, "voided_on"),
         void_reason=str(row["void_reason"]),
     )

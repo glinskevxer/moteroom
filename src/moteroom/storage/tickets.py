@@ -8,15 +8,14 @@ letting a bad row land and be found in March.
 from __future__ import annotations
 
 import sqlite3
-from datetime import date
 from decimal import Decimal
 
 from moteroom.core.errors import ConflictError, NotFoundError
 from moteroom.core.ids import ModuleId
 from moteroom.core.season import Season
-from moteroom.core.weight import Weight
 from moteroom.receiving.book import TicketBook
 from moteroom.receiving.ticket import ModuleTicket
+from moteroom.storage import rows as read
 from moteroom.storage.repository import Repository
 
 COLUMNS = "number, season, module, producer, farm, weighed_on, gross, tare, moisture, voids"
@@ -89,9 +88,9 @@ class TicketRepository(Repository):
             module=ModuleId(row["module"]),
             producer=row["producer"],
             farm=row["farm"],
-            weighed_on=date.fromisoformat(row["weighed_on"]),
-            gross=Weight(int(row["gross"])),
-            tare=Weight(int(row["tare"])),
+            weighed_on=read.day(row, "weighed_on"),
+            gross=read.weight(row, "gross"),
+            tare=read.weight(row, "tare"),
             moisture=Decimal(row["moisture"]),
-            voids=None if row["voids"] is None else int(row["voids"]),
+            voids=None if row["voids"] is None else read.number(row, "voids"),
         )

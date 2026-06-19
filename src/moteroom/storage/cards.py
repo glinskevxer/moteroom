@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import sqlite3
 from collections.abc import Callable, Sequence
-from datetime import date
 from decimal import Decimal
 
 from moteroom.classing.book import ClassingBook
@@ -21,6 +20,7 @@ from moteroom.classing.record import ClassingRecord
 from moteroom.core.errors import ConflictError, NotFoundError
 from moteroom.core.ids import BaleId
 from moteroom.core.season import Season
+from moteroom.storage import rows as read
 from moteroom.storage.repository import Repository
 
 COLUMNS = (
@@ -136,7 +136,7 @@ class CardRepository(Repository):
     def _read(self, row: sqlite3.Row) -> ClassingRecord:
         return ClassingRecord(
             bale_id=BaleId(row["bale_id"]),
-            classed_on=date.fromisoformat(row["classed_on"]),
+            classed_on=read.day(row, "classed_on"),
             office=row["office"],
             micronaire=Micronaire(Decimal(row["micronaire"])),
             staple=Staple(int(row["staple"])),

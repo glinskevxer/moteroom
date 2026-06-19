@@ -14,8 +14,8 @@ from decimal import Decimal
 from moteroom.core.errors import ConflictError, NotFoundError
 from moteroom.core.money import Money
 from moteroom.core.season import Season
-from moteroom.core.weight import Weight
 from moteroom.settlement.statement import Advance, Statement
+from moteroom.storage import rows as read
 from moteroom.storage.repository import Repository
 
 COLUMNS = (
@@ -47,7 +47,7 @@ class AdvanceRepository(Repository):
             "ORDER BY paid_on, reference",
             (season.year, producer),
         )
-        return tuple(Advance(row["reference"], Money(Decimal(row["amount"]))) for row in rows)
+        return tuple(Advance(row["reference"], read.money(row, "amount")) for row in rows)
 
     def total(self, season: Season, producer: str) -> Money:
         advances = self.for_producer(season, producer)
@@ -104,7 +104,7 @@ class StatementRepository(Repository):
         ).fetchone()
         if row is None:
             raise NotFoundError("statement", producer)
-        return date.fromisoformat(row["settled_on"])
+        return read.day(row, "settled_on")
 
     def _read(self, row: sqlite3.Row) -> Statement:
         season = Season(int(row["season"]))
@@ -112,11 +112,11 @@ class StatementRepository(Repository):
             producer=row["producer"],
             season=season,
             bales=int(row["bales"]),
-            lint=Weight(int(row["lint"])),
-            lint_proceeds=Money(Decimal(row["lint_proceeds"])),
-            gin_charges=Money(Decimal(row["gin_charges"])),
-            seed_credit=Money(Decimal(row["seed_credit"])),
-            freight=Money(Decimal(row["freight"])),
-            byproduct_credit=Money(Decimal(row["byproducts"])),
+            lint=read.weight(row, "lint"),
+            lint_proceeds=read.money(row, "lint_proceeds"),
+            gin_charges=read.money(row, "gin_charges"),
+            seed_credit=read.money(row, "seed_credit"),
+            freight=read.money(row, "freight"),
+            byproduct_credit=read.money(row, "byproducts"),
             advances=self.advances.for_producer(season, row["producer"]),
         )

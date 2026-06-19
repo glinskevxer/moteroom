@@ -10,7 +10,6 @@ overwriting the first.
 from __future__ import annotations
 
 from datetime import date
-from decimal import Decimal
 
 from moteroom.core.errors import ConflictError, NotFoundError
 from moteroom.core.money import CentsPerPound, Money
@@ -18,6 +17,7 @@ from moteroom.core.season import Season
 from moteroom.settlement.charges import ChargeSchedule
 from moteroom.settlement.seed import SeedTerms
 from moteroom.settlement.terms import Terms
+from moteroom.storage import rows as read
 from moteroom.storage.repository import Repository
 
 COLUMNS = (
@@ -70,19 +70,19 @@ class RatesRepository(Repository):
             raise NotFoundError("rates", str(season))
         return Terms(
             charges=ChargeSchedule(
-                ginning_per_cwt=Money(Decimal(row["ginning_per_cwt"])),
-                bagging_and_ties=Money(Decimal(row["bagging_and_ties"])),
-                module_handling=Money(Decimal(row["module_handling"])),
-                drying_per_cwt=Money(Decimal(row["drying_per_cwt"])),
-                minimum_per_bale=Money(Decimal(row["minimum_per_bale"])),
+                ginning_per_cwt=read.money(row, "ginning_per_cwt"),
+                bagging_and_ties=read.money(row, "bagging_and_ties"),
+                module_handling=read.money(row, "module_handling"),
+                drying_per_cwt=read.money(row, "drying_per_cwt"),
+                minimum_per_bale=read.money(row, "minimum_per_bale"),
             ),
             seed=SeedTerms(
-                price_per_ton=Money(Decimal(row["seed_price_per_ton"])),
+                price_per_ton=read.money(row, "seed_price_per_ton"),
                 gin_shares=int(row["seed_gin_shares"]),
                 producer_shares=int(row["seed_producer_shares"]),
-                hauling_per_ton=Money(Decimal(row["seed_hauling_per_ton"])),
+                hauling_per_ton=read.money(row, "seed_hauling_per_ton"),
             ),
-            base_rate=CentsPerPound(Decimal(row["base_loan_rate"])),
+            base_rate=read.rate(row, "base_loan_rate"),
         )
 
     def posted(self, season: Season) -> bool:

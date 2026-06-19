@@ -14,7 +14,7 @@ from datetime import date
 
 from moteroom.core.errors import ConflictError, NotFoundError
 from moteroom.core.ids import BaleId
-from moteroom.core.weight import Weight
+from moteroom.storage import rows as read
 from moteroom.storage.repository import Repository
 from moteroom.warehouse.receipt import Receipt
 from moteroom.warehouse.register import ReceiptRegister
@@ -116,16 +116,15 @@ class ReceiptRepository(Repository):
         return made
 
     def _read(self, row: sqlite3.Row) -> Receipt:
-        released = row["released_on"]
         return Receipt(
             number=row["number"],
             warehouse=row["warehouse"],
             bale_id=BaleId(row["bale_id"]),
-            received_on=date.fromisoformat(row["received_on"]),
-            net=Weight(int(row["net"])),
+            received_on=read.day(row, "received_on"),
+            net=read.weight(row, "net"),
             holder=row["holder"],
-            electronic=bool(row["electronic"]),
-            released_on=None if released is None else date.fromisoformat(released),
+            electronic=read.flag(row, "electronic"),
+            released_on=read.maybe_day(row, "released_on"),
         )
 
 
@@ -169,7 +168,7 @@ class OrderRepository(Repository):
         return ShippingOrder(
             number=row["number"],
             warehouse=row["warehouse"],
-            ordered_on=date.fromisoformat(row["ordered_on"]),
+            ordered_on=read.day(row, "ordered_on"),
             buyer=row["buyer"],
             receipts=tuple(r["receipt"] for r in rows),
             ship_by=None if ship_by is None else date.fromisoformat(ship_by),

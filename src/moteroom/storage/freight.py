@@ -11,15 +11,12 @@ from __future__ import annotations
 
 import sqlite3
 from collections.abc import Callable
-from datetime import date
-from decimal import Decimal
 
 from moteroom.core.errors import ConflictError, NotFoundError
-from moteroom.core.money import Money
 from moteroom.core.season import Season
-from moteroom.core.weight import Weight
 from moteroom.ginning.byproduct import ByproductLedger, Sale
 from moteroom.receiving.freight import FreightLedger, Haul, Rate
+from moteroom.storage import rows as read
 from moteroom.storage.repository import Repository
 
 RATE_COLUMNS = "season, hauler, per_module, per_mile, minimum"
@@ -88,7 +85,7 @@ class FreightRepository(Repository):
         return [
             Haul(
                 hauler=str(row["hauler"]),
-                hauled_on=date.fromisoformat(row["hauled_on"]),
+                hauled_on=read.day(row, "hauled_on"),
                 tickets=self._tickets(int(row["id"])),
                 miles=int(row["miles"]),
             )
@@ -136,9 +133,9 @@ class ByproductRepository(Repository):
         return [
             Sale(
                 kind=str(row["kind"]),
-                sold_on=date.fromisoformat(row["sold_on"]),
-                weight=Weight(int(row["weight"])),
-                price_per_ton=Money(Decimal(row["price_per_ton"])),
+                sold_on=read.day(row, "sold_on"),
+                weight=read.weight(row, "weight"),
+                price_per_ton=read.money(row, "price_per_ton"),
                 buyer=str(row["buyer"]),
             )
             for row in rows
@@ -154,9 +151,9 @@ class ByproductRepository(Repository):
 def _rate(row: sqlite3.Row) -> Rate:
     return Rate(
         hauler=str(row["hauler"]),
-        per_module=Money(Decimal(row["per_module"])),
-        per_mile=Money(Decimal(row["per_mile"])),
-        minimum=Money(Decimal(row["minimum"])),
+        per_module=read.money(row, "per_module"),
+        per_mile=read.money(row, "per_mile"),
+        minimum=read.money(row, "minimum"),
     )
 
 

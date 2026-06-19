@@ -9,13 +9,13 @@ from __future__ import annotations
 
 import sqlite3
 from datetime import date
-from decimal import Decimal
 
 from moteroom.core.errors import ConflictError, NotFoundError
 from moteroom.core.ids import BaleId
 from moteroom.core.money import CentsPerPound
 from moteroom.core.season import Season
 from moteroom.settlement.contract import Contract, Fill, fill_of
+from moteroom.storage import rows as read
 from moteroom.storage.repository import Repository
 
 COLUMNS = "number, season, buyer, signed_on, bales, delivery_from, delivery_to, price, basis"
@@ -76,8 +76,8 @@ class ContractRepository(Repository):
         return [
             (
                 BaleId(row["bale_id"]),
-                date.fromisoformat(row["delivered_on"]),
-                CentsPerPound(Decimal(row["rate"])),
+                read.day(row, "delivered_on"),
+                read.rate(row, "rate"),
             )
             for row in rows
         ]
@@ -93,15 +93,13 @@ class ContractRepository(Repository):
 
 
 def _contract(row: sqlite3.Row) -> Contract:
-    price = row["price"]
-    basis = row["basis"]
     return Contract(
         number=row["number"],
         buyer=row["buyer"],
-        signed_on=date.fromisoformat(row["signed_on"]),
+        signed_on=read.day(row, "signed_on"),
         bales=int(row["bales"]),
-        delivery_from=date.fromisoformat(row["delivery_from"]),
-        delivery_to=date.fromisoformat(row["delivery_to"]),
-        price=None if price is None else CentsPerPound(Decimal(price)),
-        basis=None if basis is None else CentsPerPound(Decimal(basis)),
+        delivery_from=read.day(row, "delivery_from"),
+        delivery_to=read.day(row, "delivery_to"),
+        price=read.maybe_rate(row, "price"),
+        basis=read.maybe_rate(row, "basis"),
     )

@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import sqlite3
 from collections.abc import Callable
-from datetime import date
 from decimal import Decimal
 
 from moteroom.core.errors import ConflictError, NotFoundError
@@ -19,6 +18,7 @@ from moteroom.core.weight import Weight, total
 from moteroom.ginning.run import GinRun
 from moteroom.press.bale import Bale
 from moteroom.press.run import BalePress
+from moteroom.storage import rows as read
 from moteroom.storage.repository import Repository
 
 LOT_COLUMNS = "season, number, ginned_on, seed_cotton, lint, seed, motes, closed"
@@ -112,12 +112,12 @@ class LotRepository(Repository):
     def _read(self, row: sqlite3.Row) -> GinRun:
         return GinRun(
             lot=LotId(Season(int(row["season"])), int(row["number"])),
-            ginned_on=date.fromisoformat(row["ginned_on"]),
+            ginned_on=read.day(row, "ginned_on"),
             tickets=self._tickets(int(row["season"]), int(row["number"])),
-            seed_cotton=Weight(int(row["seed_cotton"])),
-            lint=Weight(int(row["lint"])),
-            seed=Weight(int(row["seed"])),
-            motes=Weight(int(row["motes"])),
+            seed_cotton=read.weight(row, "seed_cotton"),
+            lint=read.weight(row, "lint"),
+            seed=read.weight(row, "seed"),
+            motes=read.weight(row, "motes"),
         )
 
 
@@ -174,9 +174,9 @@ class BaleRepository(Repository):
         return Bale(
             bale_id=BaleId(row["bale_id"]),
             lot=LotId(Season(int(row["season"])), int(row["lot"])),
-            pressed_on=date.fromisoformat(row["pressed_on"]),
-            gross=Weight(int(row["gross"])),
-            tare=Weight(int(row["tare"])),
+            pressed_on=read.day(row, "pressed_on"),
+            gross=read.weight(row, "gross"),
+            tare=read.weight(row, "tare"),
             moisture=Decimal(row["moisture"]),
         )
 
