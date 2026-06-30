@@ -267,3 +267,24 @@ def test_the_cash_page_reads_off_the_register(worked):
 def test_the_cash_page_on_a_book_with_nothing_written(worked):
     made = worked("report", "cash", "--as-of", "2026-03-01")
     assert "nothing needs chasing" in made.output
+
+
+def test_the_aging_page_buckets_what_is_in_store(worked):
+    worked(
+        "receipt",
+        "issue",
+        "541207000018",
+        "MW00000001",
+        "--holder",
+        "BLYTHE",
+        "--on",
+        "2025-10-20",
+    )
+    made = worked("report", "aging", "--as-of", "2026-02-01")
+    assert made.exit_code == 0
+    assert "91 to 180 days" in made.output
+    assert "the oldest has been there" in made.output
+
+
+def test_the_aging_page_on_an_empty_store(worked):
+    assert "nothing in store" in worked("report", "aging", "--as-of", "2026-02-01").output

@@ -23,6 +23,7 @@ from moteroom.core.weight import total
 from moteroom.ginning.reconcile import reconcile
 from moteroom.loan import pool
 from moteroom.receiving.yard import ModuleYard
+from moteroom.reporting import aging as aging_report
 from moteroom.reporting import cash as cash_report
 from moteroom.reporting import daily, exceptions, ladder, position, quality
 from moteroom.reporting import freight as freight_report
@@ -354,3 +355,14 @@ def cash_position(session: Session, as_of: str | None, csv_out: bool) -> None:
         cash_report.position(register.cheques(), [], [], Money.zero(), when),
         csv_out,
     )
+
+
+@report.command("aging")
+@as_of_option("Aging date")
+@csv_option
+@click.pass_obj
+def aging_report_command(session: Session, as_of: str | None, csv_out: bool) -> None:
+    """How long the bales in store have been sitting."""
+    when = read_date(as_of, date.today())
+    held = session.open_repos().receipts.outstanding()
+    emit(aging_report.aging(held, DEFAULT_TARIFF, when), csv_out)
