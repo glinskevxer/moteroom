@@ -59,8 +59,9 @@ def main(ctx: click.Context, book: Path, season: str | None) -> None:
 
 
 @main.command()
+@click.option("--full", is_flag=True, help="Add the settings and the seasons.")
 @click.pass_obj
-def about(session: Session) -> None:
+def about(session: Session, full: bool) -> None:
     """Say which book this is and what is in it."""
     click.echo(f"moteroom {__version__}")
     click.echo(f"book     {session.book_path}")
@@ -70,8 +71,37 @@ def about(session: Session) -> None:
         return
     opened = session.book()
     click.echo(f"schema   {opened.version} of {LATEST}")
-    for table in opened.tables():
-        click.echo(f"  {table:<16} {opened.count(table)}")
+    size = measure(opened, session.book_path)
+    click.echo(f"size     {size.reads()}")
+    if not full:
+        for table in opened.tables():
+            click.echo(f"  {table:<16} {opened.count(table)}")
+        return
+    repos = session.open_repos()
+    click.echo()
+    click.echo("settings")
+    for name, value in repos.settings.all():
+        click.echo(f"  {name:<16} {value}")
+    for name in repos.settings.missing():
+        click.echo(f"  {name:<16} not set")
+    click.echo()
+    click.echo("seasons")
+    for held in repos.seasons.all():
+        marker = "*" if held.season == session.season else " "
+        click.echo(f" {marker} {held}")
+    if not repos.seasons.years():
+        click.echo("   nothing in this book yet")
+    click.echo()
+    click.echo("this season")
+    tickets = repos.tickets.book(session.season)
+    click.echo(f"  producers        {len(tickets.producers())}")
+    click.echo(f"  modules          {len(tickets)}")
+    click.echo(f"  seed cotton      {tickets.net()}")
+    click.echo(f"  lots             {len(repos.lots.for_season(session.season))}")
+    click.echo(f"  bales            {len(repos.bales.for_season(session.season))}")
+    click.echo(f"  cards            {len(repos.cards.for_season(session.season))}")
+    click.echo(f"  in store         {len(repos.receipts.outstanding())}")
+    click.echo(f"  settled          {len(repos.statements.for_season(session.season))}")
 
 
 @main.command()

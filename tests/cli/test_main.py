@@ -350,3 +350,100 @@ def test_the_seasons_command_on_an_empty_book(runner, tmp_path):
     runner.invoke(main, ["--book", str(path), "init"])
     result = runner.invoke(main, ["--book", str(path), "seasons"])
     assert "nothing in this book yet" in result.output
+
+
+def test_about_in_full_shows_the_settings_and_the_seasons(runner, tmp_path):
+    path = tmp_path / "season.sqlite3"
+    base = ["--book", str(path), "--season", "2025"]
+    runner.invoke(main, [*base, "setting", "set", "gin_code", "41207"])
+    runner.invoke(main, [*base, "producer", "add", "BLYTHE", "Blythe Farms"])
+    runner.invoke(
+        main,
+        [
+            *base,
+            "ticket",
+            "weigh",
+            "HW-004181",
+            "BLYTHE",
+            "3312",
+            "38400",
+            "17200",
+            "--on",
+            "2025-10-14",
+        ],
+    )
+    result = runner.invoke(main, [*base, "about", "--full"])
+    assert result.exit_code == 0
+    assert "gin_code" in result.output
+    assert "warehouse        not set" in result.output
+    assert "* 2025/26" in result.output
+
+
+def test_about_in_full_on_a_book_with_nothing_in_it(runner, tmp_path):
+    path = tmp_path / "season.sqlite3"
+    runner.invoke(main, ["--book", str(path), "init"])
+    result = runner.invoke(main, ["--book", str(path), "about", "--full"])
+    assert "nothing in this book yet" in result.output
+    assert "not set" in result.output
+
+
+def test_about_shows_the_size_of_the_book(runner, tmp_path):
+    path = tmp_path / "season.sqlite3"
+    runner.invoke(main, ["--book", str(path), "init"])
+    result = runner.invoke(main, ["--book", str(path), "about"])
+    assert "size " in result.output
+    assert "producers" in result.output
+
+
+def test_about_in_full_counts_this_season(runner, tmp_path):
+    path = tmp_path / "season.sqlite3"
+    base = ["--book", str(path), "--season", "2025"]
+    runner.invoke(main, [*base, "setting", "set", "gin_code", "41207"])
+    runner.invoke(main, [*base, "producer", "add", "BLYTHE", "Blythe Farms"])
+    runner.invoke(
+        main,
+        [
+            *base,
+            "ticket",
+            "weigh",
+            "HW-004181",
+            "BLYTHE",
+            "3312",
+            "38400",
+            "17200",
+            "--on",
+            "2025-10-14",
+        ],
+    )
+    runner.invoke(
+        main,
+        [
+            *base,
+            "lot",
+            "gin",
+            "1",
+            "--lint",
+            "7400",
+            "--seed",
+            "11800",
+            "--motes",
+            "1300",
+            "--on",
+            "2025-10-16",
+        ],
+    )
+    result = runner.invoke(main, [*base, "about", "--full"])
+    assert "this season" in result.output
+    assert "modules          1" in result.output
+    assert "seed cotton      21,200 lb" in result.output
+    assert "lots             1" in result.output
+    assert "settled          0" in result.output
+
+
+def test_about_in_full_on_a_season_nobody_worked(runner, tmp_path):
+    path = tmp_path / "season.sqlite3"
+    base = ["--book", str(path), "--season", "2030"]
+    runner.invoke(main, [*base, "init"])
+    result = runner.invoke(main, [*base, "about", "--full"])
+    assert "modules          0" in result.output
+    assert "in store         0" in result.output
