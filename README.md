@@ -76,6 +76,7 @@ the drift between the two, and it closes up as the rest of the bales come off.
     src/moteroom/tools/       the gates CI runs against the repository itself
     docs/GLOSSARY.md          the gin's own words, generated from the code
     docs/ARCHITECTURE.md      the layers, generated from the rules that enforce them
+    docs/COMMANDS.md          every command, generated from the command tree
     tests/                    the test suite
 
 ## Running the checks

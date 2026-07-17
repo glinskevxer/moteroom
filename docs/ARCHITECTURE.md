@@ -16,7 +16,7 @@ Generated from the layer rules the build enforces. Run
 | `service` | 6 | `classing`, `core`, `ginning`, `loan`, `press`, `receiving`, `reporting`, `settlement`, `storage`, `warehouse` | the work that needs the book and the domain at once |
 | `settlement` | 10 | `classing`, `core`, `ginning`, `loan`, `press`, `receiving`, `warehouse` | charges, seed, allocation, contracts, equity, cheques |
 | `storage` | 20 | `classing`, `core`, `ginning`, `loan`, `press`, `receiving`, `settlement`, `warehouse` | the sqlite book, its migrations and the repositories over it |
-| `tools` | 15 | `classing`, `cli`, `core`, `ginning`, `loan`, `press`, `receiving`, `reporting`, `service`, `settlement`, `storage`, `warehouse` | the gates the build runs against itself |
+| `tools` | 16 | `classing`, `cli`, `core`, `ginning`, `loan`, `press`, `receiving`, `reporting`, `service`, `settlement`, `storage`, `warehouse` | the gates the build runs against itself |
 | `warehouse` | 7 | `classing`, `core`, `ginning`, `loan`, `press`, `receiving`, `settlement` | receipts, storage, shipping, transfers, insurance |
 
 Reading the table: a package may import itself and the packages named,
