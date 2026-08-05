@@ -62,3 +62,51 @@ def test_the_book_lists_its_own_tables():
 def test_counting_a_table_nobody_made():
     with Book.open() as book, pytest.raises(KeyError):
         book.count("nothing")
+
+
+def test_a_book_waits_rather_than_failing_when_another_is_writing(tmp_path):
+    path = tmp_path / "season.sqlite3"
+    with Book.open(path) as book:
+        row = book.connection.execute("PRAGMA busy_timeout").fetchone()
+        assert row[0] >= 1_000
+
+
+def test_analysing_leaves_sqlite_something_to_read(tmp_path):
+    path = tmp_path / "season.sqlite3"
+    with Book.open(path) as book:
+        book.connection.execute("INSERT INTO producers VALUES ('BLYTHE', 'Blythe Farms')")
+        book.analyse()
+        rows = book.connection.execute(
+            "SELECT name FROM sqlite_master WHERE name = 'sqlite_stat1'"
+        ).fetchall()
+        assert rows
+
+
+def test_analysing_an_empty_book_is_not_an_error():
+    with Book.open() as book:
+        book.analyse()
+        assert book.count("producers") == 0
+
+
+def test_closing_twice_does_not_raise(tmp_path):
+    book = Book.open(tmp_path / "season.sqlite3")
+    book.close()
+    book.close()
+
+
+def test_a_closed_book_stays_readable_on_disc(tmp_path):
+    path = tmp_path / "season.sqlite3"
+    book = Book.open(path)
+    book.connection.execute("INSERT INTO producers VALUES ('BLYTHE', 'Blythe Farms')")
+    book.connection.commit()
+    book.close()
+    with Book.open(path) as reopened:
+        assert reopened.count("producers") == 1
+
+
+def test_two_books_can_read_the_same_file(tmp_path):
+    path = tmp_path / "season.sqlite3"
+    with Book.open(path) as first, Book.open(path) as second:
+        first.connection.execute("INSERT INTO producers VALUES ('BLYTHE', 'Blythe Farms')")
+        first.connection.commit()
+        assert second.count("producers") == 1

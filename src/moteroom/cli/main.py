@@ -150,6 +150,18 @@ def verify_book(session: Session, target: Path | None) -> None:
         raise SystemExit(1)
 
 
+@main.command("analyse")
+@click.pass_obj
+def analyse_book(session: Session) -> None:
+    """Let sqlite look at the tables so its planner stops guessing."""
+    book = session.require_book()
+    book.analyse()
+    click.echo(f"analysed {session.book_path}")
+    for table, rows in table_sizes(book).items():
+        if rows:
+            click.echo(f"  {table:<16} {rows}")
+
+
 @main.command("compact")
 @click.pass_obj
 def compact_book(session: Session) -> None:

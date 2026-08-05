@@ -447,3 +447,26 @@ def test_about_in_full_on_a_season_nobody_worked(runner, tmp_path):
     result = runner.invoke(main, [*base, "about", "--full"])
     assert "modules          0" in result.output
     assert "in store         0" in result.output
+
+
+def test_analysing_lets_sqlite_look_at_the_tables(runner, tmp_path):
+    path = tmp_path / "season.sqlite3"
+    base = ["--book", str(path), "--season", "2025"]
+    runner.invoke(main, [*base, "producer", "add", "BLYTHE", "Blythe Farms"])
+    result = runner.invoke(main, [*base, "analyse"])
+    assert result.exit_code == 0
+    assert "analysed" in result.output
+    assert "producers" in result.output
+
+
+def test_analysing_an_empty_book_says_nothing_much(runner, tmp_path):
+    path = tmp_path / "season.sqlite3"
+    runner.invoke(main, ["--book", str(path), "init"])
+    result = runner.invoke(main, ["--book", str(path), "analyse"])
+    assert result.exit_code == 0
+    assert "producers" not in result.output
+
+
+def test_analysing_a_book_that_is_not_there(runner, tmp_path):
+    result = runner.invoke(main, ["--book", str(tmp_path / "none.sqlite3"), "analyse"])
+    assert result.exit_code != 0

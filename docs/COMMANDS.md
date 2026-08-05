@@ -26,6 +26,7 @@ Generated from the command tree. Run
 | command | what it does |
 | --- | --- |
 | `moteroom about` | Say which book this is and what is in it. |
+| `moteroom analyse` | Let sqlite look at the tables so its planner stops guessing. |
 | `moteroom audit actions` | How often each action has been run this season. |
 | `moteroom audit list` | The most recent things done, newest first. |
 | `moteroom audit subject` | Everything ever done to one ticket, lot or bale. |

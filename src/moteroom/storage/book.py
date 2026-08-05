@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import sqlite3
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from pathlib import Path
 from types import TracebackType
 from typing import Self
@@ -18,6 +18,7 @@ from typing import Self
 from moteroom.storage.migrations import current_version, migrate
 
 MEMORY = ":memory:"
+BUSY_TIMEOUT_MS = 5_000
 
 
 class Book:
@@ -33,6 +34,7 @@ class Book:
         connection = sqlite3.connect(target)
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA foreign_keys = ON")
+        connection.execute(f"PRAGMA busy_timeout = {BUSY_TIMEOUT_MS}")
         migrate(connection)
         return cls(connection)
 
@@ -58,7 +60,21 @@ class Book:
         row = self.connection.execute(f"SELECT count(*) AS n FROM {table}").fetchone()
         return int(row["n"])
 
+    def analyse(self) -> None:
+        """Let sqlite look at the tables and remember what it found.
+
+        The planner guesses at row counts until somebody tells it. On a book
+        with one lot in it that costs nothing either way, and on a book with a
+        season in it the difference is a report that returns and one that
+        walks every bale for every line.
+        """
+        self.connection.execute("ANALYZE")
+        self.connection.commit()
+
     def close(self) -> None:
+        """Close the book, letting sqlite tidy up on the way out."""
+        with suppress(sqlite3.ProgrammingError):
+            self.connection.execute("PRAGMA optimize")
         self.connection.close()
 
     def __enter__(self) -> Self:
