@@ -15,7 +15,8 @@ import ast
 import sys
 from pathlib import Path
 
-from moteroom.tools.gate import PACKAGE_ROOT, REPO_ROOT, Finding, module_name, run_gate
+from moteroom.tools.document import Generated
+from moteroom.tools.gate import PACKAGE_ROOT, REPO_ROOT, Finding, module_name
 
 GLOSSARY = REPO_ROOT / "docs" / "GLOSSARY.md"
 PACKAGES = (
@@ -64,30 +65,27 @@ def render() -> str:
     return "\n".join(lines) + "\n"
 
 
+DOCUMENT = Generated(
+    name="check_glossary",
+    path=GLOSSARY,
+    render=render,
+    counted=lambda: len(entries()),
+)
+
+
 def run() -> tuple[list[Finding], int]:
     """Compare the written glossary against the code."""
-    made = render()
-    if not GLOSSARY.exists():
-        return [Finding("GLOSSARY.md", "has not been generated yet")], len(entries())
-    held = GLOSSARY.read_text(encoding="utf-8")
-    if held != made:
-        return [Finding("GLOSSARY.md", "is out of date, run with --write")], len(entries())
-    return [], len(entries())
+    return DOCUMENT.check()
 
 
 def write() -> Path:
     """Bring the glossary up to date."""
-    GLOSSARY.parent.mkdir(parents=True, exist_ok=True)
-    GLOSSARY.write_text(render(), encoding="utf-8")
-    return GLOSSARY
+    return DOCUMENT.write()
 
 
 def main() -> int:
     """Run the gate, or write the glossary when asked to."""
-    if "--write" in sys.argv[1:]:
-        print(f"wrote {write()}")
-        return 0
-    return run_gate("check_glossary", run)
+    return DOCUMENT.main(sys.argv[1:])
 
 
 if __name__ == "__main__":

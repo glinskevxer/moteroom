@@ -1,4 +1,8 @@
+from pathlib import Path
+from types import ModuleType
+
 from moteroom.tools.check_glossary import GLOSSARY, HEADING, entries, main, render, run
+from moteroom.tools.document import Generated
 
 
 def test_the_glossary_is_up_to_date():
@@ -35,10 +39,20 @@ def test_the_written_glossary_matches_what_renders():
     assert GLOSSARY.read_text(encoding="utf-8") == render()
 
 
+def elsewhere(module: ModuleType, path: Path) -> Generated:
+    """The same document written somewhere a test can look at it."""
+    return Generated(
+        name=module.DOCUMENT.name,
+        path=path,
+        render=module.DOCUMENT.render,
+        counted=module.DOCUMENT.counted,
+    )
+
+
 def test_a_missing_glossary_is_caught(monkeypatch, tmp_path):
     import moteroom.tools.check_glossary as module
 
-    monkeypatch.setattr(module, "GLOSSARY", tmp_path / "none.md")
+    monkeypatch.setattr(module, "DOCUMENT", elsewhere(module, tmp_path / "none.md"))
     findings, _ = module.run()
     assert "has not been generated" in str(findings[0])
 
@@ -48,7 +62,7 @@ def test_a_stale_glossary_is_caught(monkeypatch, tmp_path):
 
     stale = tmp_path / "GLOSSARY.md"
     stale.write_text("# Glossary\n", encoding="utf-8")
-    monkeypatch.setattr(module, "GLOSSARY", stale)
+    monkeypatch.setattr(module, "DOCUMENT", elsewhere(module, stale))
     findings, _ = module.run()
     assert "out of date" in str(findings[0])
 
@@ -57,7 +71,7 @@ def test_writing_brings_it_back(monkeypatch, tmp_path):
     import moteroom.tools.check_glossary as module
 
     made = tmp_path / "docs" / "GLOSSARY.md"
-    monkeypatch.setattr(module, "GLOSSARY", made)
+    monkeypatch.setattr(module, "DOCUMENT", elsewhere(module, made))
     module.write()
     assert made.read_text(encoding="utf-8") == render()
     assert module.run()[0] == []

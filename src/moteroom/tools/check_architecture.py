@@ -11,9 +11,11 @@ Run the module to check it. Run it with ``--write`` to bring it up to date.
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
 from moteroom.tools.check_layers import ALLOWED
-from moteroom.tools.gate import PACKAGE_ROOT, REPO_ROOT, Finding, run_gate
+from moteroom.tools.document import Generated
+from moteroom.tools.gate import PACKAGE_ROOT, REPO_ROOT, Finding
 
 ARCHITECTURE = REPO_ROOT / "docs" / "ARCHITECTURE.md"
 HEADING = "# Architecture"
@@ -68,31 +70,35 @@ def render() -> str:
     return "\n".join(lines) + "\n"
 
 
+DOCUMENT = Generated(
+    name="check_architecture",
+    path=ARCHITECTURE,
+    render=render,
+    counted=lambda: len(ALLOWED),
+)
+
+
 def run() -> tuple[list[Finding], int]:
     """Compare the written document against the rules."""
-    if not ARCHITECTURE.exists():
-        return [Finding("ARCHITECTURE.md", "has not been generated yet")], len(ALLOWED)
-    if ARCHITECTURE.read_text(encoding="utf-8") != render():
-        return [Finding("ARCHITECTURE.md", "is out of date, run with --write")], len(ALLOWED)
+    findings, checked = DOCUMENT.check()
     missing = sorted(set(ALLOWED) - set(WHAT))
-    return (
-        [Finding(name, "is a package the document does not describe") for name in missing],
-        len(ALLOWED),
+    findings.extend(
+        Finding(name, "is a package the document does not describe") for name in missing
     )
+    return findings, checked
 
 
-def write() -> None:
+def write() -> Path:
     """Bring the document up to date."""
-    ARCHITECTURE.parent.mkdir(parents=True, exist_ok=True)
-    ARCHITECTURE.write_text(render(), encoding="utf-8")
+    return DOCUMENT.write()
 
 
 def main() -> int:
     """Run the gate, or write the document when asked to."""
     if "--write" in sys.argv[1:]:
-        write()
-        print(f"wrote {ARCHITECTURE}")
-        return 0
+        return DOCUMENT.main(sys.argv[1:])
+    from moteroom.tools.gate import run_gate
+
     return run_gate("check_architecture", run)
 
 

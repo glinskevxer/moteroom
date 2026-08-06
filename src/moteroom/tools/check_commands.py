@@ -11,11 +11,13 @@ Run the module to check it. Run it with ``--write`` to bring it up to date.
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
 import click
 
 from moteroom.cli.main import main
-from moteroom.tools.gate import REPO_ROOT, Finding, run_gate
+from moteroom.tools.document import Generated
+from moteroom.tools.gate import REPO_ROOT, Finding
 
 COMMANDS = REPO_ROOT / "docs" / "COMMANDS.md"
 HEADING = "# Commands"
@@ -71,33 +73,36 @@ def render() -> str:
     return "\n".join(lines) + "\n"
 
 
+DOCUMENT = Generated(
+    name="check_commands",
+    path=COMMANDS,
+    render=render,
+    counted=lambda: len(leaves()),
+)
+
+
 def run() -> tuple[list[Finding], int]:
     """Compare the written list against the tree."""
-    made = leaves()
-    if not COMMANDS.exists():
-        return [Finding("COMMANDS.md", "has not been generated yet")], len(made)
-    if COMMANDS.read_text(encoding="utf-8") != render():
-        return [Finding("COMMANDS.md", "is out of date, run with --write")], len(made)
-    findings = [
+    findings, checked = DOCUMENT.check()
+    findings.extend(
         Finding(f"moteroom {path}", "is a command that says nothing")
-        for path, what in made
+        for path, what in leaves()
         if not what
-    ]
-    return findings, len(made)
+    )
+    return findings, checked
 
 
-def write() -> None:
+def write() -> Path:
     """Bring the list up to date."""
-    COMMANDS.parent.mkdir(parents=True, exist_ok=True)
-    COMMANDS.write_text(render(), encoding="utf-8")
+    return DOCUMENT.write()
 
 
 def main_gate() -> int:
     """Run the gate, or write the list when asked to."""
     if "--write" in sys.argv[1:]:
-        write()
-        print(f"wrote {COMMANDS}")
-        return 0
+        return DOCUMENT.main(sys.argv[1:])
+    from moteroom.tools.gate import run_gate
+
     return run_gate("check_commands", run)
 
 
