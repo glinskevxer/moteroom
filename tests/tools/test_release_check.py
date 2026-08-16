@@ -7,7 +7,7 @@ from moteroom.tools.release_check import CHANGELOG, PYPROJECT, main, run
 def test_the_package_is_ready_to_ship():
     findings, checked = run()
     assert findings == [], "\n".join(str(finding) for finding in findings)
-    assert checked == 4
+    assert checked == 8
 
 
 def test_the_gate_exits_clean():
@@ -88,3 +88,66 @@ def test_a_missing_pyproject_is_caught(monkeypatch, tmp_path):
 @pytest.mark.parametrize("path", [PYPROJECT, CHANGELOG])
 def test_the_packaging_files_are_where_the_gate_looks(path):
     assert path.exists()
+
+
+def test_the_changelog_opens_with_this_version():
+    from moteroom.tools.release_check import _first_entry
+
+    assert _first_entry(CHANGELOG) == __version__
+
+
+def test_a_changelog_that_opens_with_something_else_is_caught(monkeypatch, tmp_path):
+    import moteroom.tools.release_check as module
+
+    made = tmp_path / "CHANGELOG.md"
+    made.write_text(f"# Changelog\n\n## 0.0.9\n\n## {__version__}\n", encoding="utf-8")
+    monkeypatch.setattr(module, "CHANGELOG", made)
+    findings, _ = module.run()
+    assert any("does not open with" in str(finding) for finding in findings)
+
+
+def test_a_changelog_that_is_not_there_reads_as_nothing(tmp_path):
+    from moteroom.tools.release_check import _first_entry
+
+    assert _first_entry(tmp_path / "none.md") == ""
+
+
+def test_an_unpinned_dev_dependency_is_caught(monkeypatch, tmp_path):
+    import moteroom.tools.release_check as module
+
+    made = tmp_path / "pyproject.toml"
+    made.write_text(
+        f'[project]\nname = "moteroom"\nversion = "{__version__}"\n'
+        'requires-python = ">=3.12"\n'
+        'dependencies = ["click==8.1.8"]\n'
+        '[project.optional-dependencies]\ndev = ["pytest"]\n'
+        '[project.scripts]\nmoteroom = "moteroom.cli.main:main"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(module, "PYPROJECT", made)
+    findings, _ = module.run()
+    assert any("not pinned" in str(finding) for finding in findings)
+
+
+def test_a_missing_dev_extra_is_caught(monkeypatch, tmp_path):
+    import moteroom.tools.release_check as module
+
+    made = tmp_path / "pyproject.toml"
+    made.write_text(
+        f'[project]\nname = "moteroom"\nversion = "{__version__}"\n'
+        'requires-python = ">=3.12"\n'
+        'dependencies = ["click==8.1.8"]\n'
+        '[project.scripts]\nmoteroom = "moteroom.cli.main:main"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(module, "PYPROJECT", made)
+    findings, _ = module.run()
+    assert any("dev extra" in str(finding) for finding in findings)
+
+
+def test_the_files_the_wheel_needs_are_all_there():
+    from moteroom.tools.gate import PACKAGE_ROOT
+    from moteroom.tools.release_check import PACKAGED
+
+    for name in PACKAGED:
+        assert (PACKAGE_ROOT / name).exists()

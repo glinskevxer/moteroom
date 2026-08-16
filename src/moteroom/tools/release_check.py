@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 import tomllib
+from pathlib import Path
 
 from moteroom import __version__
 from moteroom.tools.gate import PACKAGE_ROOT, REPO_ROOT, Finding, run_gate
@@ -18,6 +19,7 @@ PYPROJECT = REPO_ROOT / "pyproject.toml"
 CHANGELOG = REPO_ROOT / "CHANGELOG.md"
 ENTRY_POINT = "moteroom.cli.main:main"
 VERSION_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
+PACKAGED = ("py.typed", "__init__.py", "cli/main.py")
 
 
 def _pyproject() -> dict[str, object]:
@@ -59,7 +61,35 @@ def run() -> tuple[list[Finding], int]:
         for requirement in dependencies:
             if "==" not in str(requirement):
                 findings.append(Finding(str(requirement), "is not pinned exactly"))
-    return findings, 4
+
+    extras = project.get("optional-dependencies")
+    if not isinstance(extras, dict) or "dev" not in extras:
+        findings.append(Finding("optional-dependencies", "has no dev extra to install from"))
+    elif isinstance(extras["dev"], list):
+        for requirement in extras["dev"]:
+            if "==" not in str(requirement):
+                findings.append(Finding(str(requirement), "is not pinned exactly"))
+
+    if str(project.get("requires-python", "")) < ">=3.12":
+        findings.append(Finding("requires-python", "does not say which pythons this runs on"))
+
+    for name in PACKAGED:
+        if not (PACKAGE_ROOT / name).exists():
+            findings.append(Finding(name, "is expected in the wheel and is not there"))
+
+    if declared != "0.0.0" and _first_entry(CHANGELOG) != declared:
+        findings.append(Finding("CHANGELOG.md", f"does not open with {declared}"))
+    return findings, len(PACKAGED) + 5
+
+
+def _first_entry(path: Path) -> str:
+    """The version the changelog opens with, which should be this one."""
+    if not path.exists():
+        return ""
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("## "):
+            return line.removeprefix("## ").strip()
+    return ""
 
 
 def main() -> int:
