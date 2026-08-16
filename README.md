@@ -11,6 +11,9 @@ it. There is no server and nothing to configure beyond the plant's own numbers.
 
     pip install -e ".[dev]"
 
+That puts a `moteroom` command on the path. Without installing it,
+`python -m moteroom` does the same thing from a checkout.
+
 ## What it covers
 
 - **Receiving** module tickets, moisture, the yard's running order

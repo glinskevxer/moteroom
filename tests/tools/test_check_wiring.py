@@ -23,7 +23,7 @@ def test_the_gate_exits_clean():
 
 
 def test_the_entry_points_are_the_package_and_the_command_tree():
-    assert {"moteroom", "moteroom.cli.main"} == ENTRY_POINTS
+    assert {"moteroom", "moteroom.__main__", "moteroom.cli.main"} == ENTRY_POINTS
 
 
 def test_the_graph_covers_every_module():

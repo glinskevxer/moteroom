@@ -28,7 +28,6 @@ from moteroom.cli.settings import setting
 from moteroom.cli.settling import settle
 from moteroom.cli.trail import audit
 from moteroom.cli.warehousing import order, receipt
-from moteroom.core.errors import MoteroomError
 from moteroom.service import closing, doctor, export
 from moteroom.storage.backup import backup, verify
 from moteroom.storage.maintenance import compact, measure, table_sizes
@@ -242,19 +241,3 @@ def close(session: Session) -> None:
     click.echo(str(made))
     if not made.can_close:
         raise SystemExit(1)
-
-
-def run() -> int:
-    """Entry point that turns our own errors into a message rather than a trace."""
-    try:
-        main.main(standalone_mode=False)
-    except MoteroomError as exc:
-        click.echo(f"error: {exc}", err=True)
-        return 1
-    except click.ClickException as exc:
-        exc.show()
-        return exc.exit_code
-    except click.Abort:
-        click.echo("aborted", err=True)
-        return 1
-    return 0

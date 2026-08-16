@@ -18,6 +18,7 @@ from moteroom.tools.gate import PACKAGE_ROOT, REPO_ROOT, Finding, module_name, r
 TESTS = REPO_ROOT / "tests"
 EXEMPT = {
     "moteroom",
+    "moteroom.__main__",
     "moteroom.core",
     "moteroom.receiving",
     "moteroom.ginning",

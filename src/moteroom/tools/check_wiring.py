@@ -15,7 +15,7 @@ import ast
 
 from moteroom.tools.gate import Finding, module_name, run_gate, source_files
 
-ENTRY_POINTS = {"moteroom", "moteroom.cli.main"}
+ENTRY_POINTS = {"moteroom", "moteroom.__main__", "moteroom.cli.main"}
 
 
 def _imports(tree: ast.Module) -> set[str]:
