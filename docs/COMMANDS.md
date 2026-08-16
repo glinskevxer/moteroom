@@ -94,6 +94,7 @@ Generated from the command tree. Run
 | `moteroom report settlements` | Every settlement written this season. |
 | `moteroom report statement` | One producer's page, off the settlement already written. |
 | `moteroom report storage` | What the warehouse will bill. |
+| `moteroom report turnaround` | How long the classing office is taking, week by week. |
 | `moteroom seasons` | Every season this book holds and how much of each. |
 | `moteroom setting get` | Read one setting. |
 | `moteroom setting list` | Every setting, and what is still missing. |

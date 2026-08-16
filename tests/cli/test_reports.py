@@ -288,3 +288,21 @@ def test_the_aging_page_buckets_what_is_in_store(worked):
 
 def test_the_aging_page_on_an_empty_store(worked):
     assert "nothing in store" in worked("report", "aging", "--as-of", "2026-02-01").output
+
+
+def test_the_turnaround_page_reads_off_the_cards(worked):
+    made = worked("report", "turnaround")
+    assert made.exit_code == 0
+    assert "no cards back yet" in made.output
+
+
+def test_the_turnaround_page_groups_by_week(run):
+    run("setting", "set", "gin_code", "41207")
+    run("producer", "add", "BLYTHE", "Blythe Farms")
+    run(
+        "ticket", "weigh", "HW-004181", "BLYTHE", "3312", "38400", "17200", "--on", "2025-10-14"
+    )
+    run("lot", "gin", "1", "--lint", "7400", "--seed", "11800", "--motes", "1300")
+    run("bale", "press", "1", "538", "--on", "2025-10-16")
+    made = run("report", "turnaround")
+    assert made.exit_code == 0

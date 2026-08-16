@@ -12,7 +12,7 @@ Generated from the layer rules the build enforces. Run
 | `loan` | 4 | `classing`, `core`, `ginning`, `press`, `receiving`, `settlement`, `warehouse` | the premium and discount schedule, pool value, redemption |
 | `press` | 4 | `classing`, `core`, `ginning`, `loan`, `receiving`, `settlement`, `warehouse` | bales, the counter, moisture restoration, bagging and ties |
 | `receiving` | 6 | `classing`, `core`, `ginning`, `loan`, `press`, `settlement`, `warehouse` | tickets, parties, the yard, the scales, the freight |
-| `reporting` | 12 | `classing`, `core`, `ginning`, `loan`, `press`, `receiving`, `settlement`, `warehouse` | reports, as data rather than as text |
+| `reporting` | 13 | `classing`, `core`, `ginning`, `loan`, `press`, `receiving`, `settlement`, `warehouse` | reports, as data rather than as text |
 | `service` | 6 | `classing`, `core`, `ginning`, `loan`, `press`, `receiving`, `reporting`, `settlement`, `storage`, `warehouse` | the work that needs the book and the domain at once |
 | `settlement` | 10 | `classing`, `core`, `ginning`, `loan`, `press`, `receiving`, `warehouse` | charges, seed, allocation, contracts, equity, cheques |
 | `storage` | 20 | `classing`, `core`, `ginning`, `loan`, `press`, `receiving`, `settlement`, `warehouse` | the sqlite book, its migrations and the repositories over it |

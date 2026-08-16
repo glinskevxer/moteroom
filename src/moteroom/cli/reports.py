@@ -29,6 +29,7 @@ from moteroom.reporting import daily, exceptions, ladder, position, quality
 from moteroom.reporting import freight as freight_report
 from moteroom.reporting import producers as producer_report
 from moteroom.reporting import season as season_report
+from moteroom.reporting import turnaround as turnaround_report
 from moteroom.reporting.report import Report
 from moteroom.reporting.settlement import settlement_summary, statement_report, unsettled
 from moteroom.service import inventory
@@ -366,3 +367,17 @@ def aging_report_command(session: Session, as_of: str | None, csv_out: bool) -> 
     when = read_date(as_of, date.today())
     held = session.open_repos().receipts.outstanding()
     emit(aging_report.aging(held, DEFAULT_TARIFF, when), csv_out)
+
+
+@report.command("turnaround")
+@csv_option
+@click.pass_obj
+def turnaround_by_week(session: Session, csv_out: bool) -> None:
+    """How long the classing office is taking, week by week."""
+    repos = session.open_repos()
+    pairs = [
+        (one, repos.cards.get(one.bale_id))
+        for one in repos.bales.for_season(session.season)
+        if repos.cards.has(one.bale_id)
+    ]
+    emit(turnaround_report.turnaround(pairs), csv_out)
