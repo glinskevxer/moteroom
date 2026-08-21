@@ -88,3 +88,8 @@ the drift between the two, and it closes up as the rest of the bales come off.
     mypy
     python -m moteroom.tools.check_migrations
     pytest
+
+The gates in `src/moteroom/tools/` are run as their own CI steps and again from
+the test suite, so `pytest` alone is enough on a working machine. Three of them
+generate a document under `docs/` and check it has not drifted; run them with
+`--write` after changing what they read.
